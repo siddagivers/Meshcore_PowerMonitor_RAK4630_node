@@ -1,0 +1,7 @@
+upstream/
+output/
+.venv/
+__pycache__/
+*.pyc
+.pio/
+.env

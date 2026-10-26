@@ -1,0 +1,51 @@
+name: Versioned RAK4631 firmware
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - name: Check out firmware source
+        uses: actions/checkout@v4
+      - name: Configure Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Determine pre-release version
+        run: |
+          echo "PM_VERSION=$(cat VERSION)-dev.$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+          echo "PM_BUILD_SUFFIX=dev.$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+          echo "PM_SOURCE_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
+      - name: Run host unit tests
+        run: bash tests/run_tests.sh
+      - name: Install PlatformIO
+        run: python -m pip install --upgrade platformio
+      - name: Compile RAK4631 + RAK15001 image
+        run: bash scripts/build_on_pi.sh rak15001
+      - name: Upload versioned build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAK4631_rak15001_PM_v${{ env.PM_VERSION }}
+          path: output/*
+          if-no-files-found: error
+      - name: Publish a GitHub pre-release only after successful compilation
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.PM_VERSION }}
+          name: RAK4631 PowerMonitor v${{ env.PM_VERSION }}
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          generate_release_notes: true
+          files: output/*
+          fail_on_unmatched_files: true
+          body: |
+            Automated compiler-verified developer build.
+            Hardware validation and bootloader pairing are not confirmed.
+            Read the README and check the manifest + SHA256 before flashing.
