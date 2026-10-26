@@ -1,0 +1,112 @@
+From https://github.com/Mesh-America/mesh-america-quake-repeater
+ * branch              c908bb09e68ca81e1d19198776e0f2e5b7e48653 -> FETCH_HEAD
+HEAD is now at c908bb09 Merge pull request #33 from Mesh-America/next
+M	examples/simple_repeater/main.cpp
+M	variants/rak4631/platformio.ini
+Patched MeshCore 0.1.0-pi.1 storage rak15001 upstream /home/pi/Meshcore_PowerMonitor_RAK4630_node/upstream
+Processing RAK_4631_repeater_power_monitor (board: rak4631; platform: nordicnrf52; framework: arduino)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+Device OTA DEFLATE: qualified infrastructure role; bounded per-block encoder
+nRF52 infrastructure flash trim: compact crypto, unused USB device classes/GPS cache/vendor splash, compact OTA target names
+CONFIGURATION: https://docs.platformio.org/page/boards/nordicnrf52/rak4631.html
+PLATFORM: Nordic nRF52 (11.0.0) > WisCore RAK4631 Board
+HARDWARE: NRF52840 64MHz, 243KB RAM, 796KB Flash
+DEBUG: Current (jlink) External (jlink, stlink)
+PACKAGES: 
+ - framework-arduinoadafruitnrf52 @ 1.10701.0+sha.d5413016 
+ - framework-cmsis @ 2.50700.210515 (5.7.0) 
+ - tool-adafruit-nrfutil @ 1.503.0 (5.3) 
+ - tool-sreccat @ 1.164.0 (1.64) 
+ - toolchain-gccarmnoneeabi @ 1.140201.0 (14.2.1)
+nRF52 loop stack: explicit LTO-safe core task policy enabled
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 47 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- SPI @ 1.0
+|-- Wire @ 1.0
+|-- RadioLib @ 7.7.1+sha.187ef2479
+|-- Crypto @ 0.4.0
+|-- RTClib @ 2.1.4
+|-- Melopero RV3028 @ 1.2.0
+|-- CayenneLPP @ 1.6.1
+|-- CustomLFS @ 0.2.1+sha.b3928ea
+|-- Adafruit INA3221 Library @ 1.0.1
+|-- Adafruit INA219 @ 1.2.3
+|-- INA226 @ 0.6.6
+|-- Adafruit INA260 Library @ 1.5.4
+|-- Adafruit AHTX0 @ 2.0.6
+|-- Adafruit BME280 Library @ 2.3.0
+|-- Adafruit BMP280 Library @ 2.6.8
+|-- Adafruit SHTC3 Library @ 1.0.2
+|-- Sensirion I2C SHT4x @ 1.1.2
+|-- Arduino_LPS22HB @ 1.0.3
+|-- Adafruit MLX90614 Library @ 2.1.7
+|-- Adafruit_VL53L0X @ 1.2.5
+|-- MicroNMEA @ 2.0.6
+|-- Adafruit BME680 Library @ 2.0.6
+|-- Adafruit BMP085 Library @ 1.2.4
+|-- Adafruit SSD1306 @ 2.5.17
+|-- SparkFun u-blox GNSS Arduino Library @ 2.2.29
+|-- BSEC Software Library @ 1.8.1492
+|-- Adafruit Little File System Libraries @ 0.11.0
+|-- Adafruit Internal File System on Bluefruit nRF52 @ 0.11.0
+|-- nrf52
+|-- Adafruit nRFCrypto
+|-- ed25519
+|-- ArduinoJson @ 7.4.3
+|-- Adafruit TinyUSB Library @ 3.7.0
+|-- Adafruit Bluefruit nRF52 Libraries @ 0.21.0
+|-- Adafruit GFX Library @ 1.13.0
+nRF52 USB: build-local bounded startup/session fix enabled
+nRF52 USB: build-local bounded startup/session fix enabled
+nRF52 USB: build-local bounded startup/session fix enabled
+nRF52 flash: build-local verified flush fix enabled for InternalFileSystem.cpp
+nRF52 flash: build-local verified flush fix enabled for flash_cache.c
+nRF52 flash: build-local verified flush fix enabled for flash_nrf5x.c
+nRF52 BLE: private framework fix in BLEConnection.cpp
+nRF52 BLE: private framework fix in BLEGatt.cpp
+nRF52 BLE: private framework fix in bluefruit.cpp
+nRF52 BLE: private FreeRTOS-safe DFU handoff
+Building in release mode
+check(["checkprogsize"], [".pio/build/RAK_4631_repeater_power_monitor/firmware.elf"])
+Runtime RAM: 139,940 internal bytes available; 72,072 required; largest region 139,940; PASS
+check(["checkprogsize"], [".pio/build/RAK_4631_repeater_power_monitor/firmware.elf"])
+nRF52 Bluetooth DFU: safe compiled handoff PASS
+Checking size .pio/build/RAK_4631_repeater_power_monitor/firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [====      ]  38.4% (used 95572 bytes from 248832 bytes)
+Flash: [=======   ]  67.3% (used 548936 bytes from 815104 bytes)
+========================= [SUCCESS] Took 22.28 seconds =========================
+
+Environment                      Status    Duration
+-------------------------------  --------  ------------
+RAK_4631_repeater_power_monitor  SUCCESS   00:00:22.281
+========================= 1 succeeded in 00:00:22.281 =========================
+Converted to uf2, output size: 1098240, start address: 0x26000
+Wrote 1098240 bytes to /home/pi/Meshcore_PowerMonitor_RAK4630_node/upstream/.pio/build/RAK_4631_repeater_power_monitor/firmware.uf2
+{
+  "version": "0.1.0-pi.1",
+  "source_commit": "47a6413783894173cc5e4ab9b0a6f51d6ff79de5",
+  "upstream": "c908bb09e68ca81e1d19198776e0f2e5b7e48653",
+  "target": "RAK_4631_repeater_power_monitor",
+  "storage": "rak15001",
+  "built_utc": "2026-10-26T21:54:52.309014+00:00",
+  "firmware": {
+    "RAK4631_rak15001_PM_v0.1.0-pi.1.bin": {
+      "bytes": 549016,
+      "sha256": "5d8c96296fe6315a9d87ef15ae99a1c6960e61e10480807dd6624c98bc5d7d3a"
+    },
+    "RAK4631_rak15001_PM_v0.1.0-pi.1.hex": {
+      "bytes": 1509976,
+      "sha256": "8245ea32efb56d82b1bea3d3359266a749e0170a5945972ad7ea68fde3fbb954"
+    },
+    "RAK4631_rak15001_PM_v0.1.0-pi.1.uf2": {
+      "bytes": 1098240,
+      "sha256": "4e99bdf9a8dd9ef6045bd94c47703fcea7d1395687d0cdbf21dae7c86feb6939"
+    }
+  }
+}
+Compiled version 0.1.0-pi.1. Artifacts: /home/pi/Meshcore_PowerMonitor_RAK4630_node/output
