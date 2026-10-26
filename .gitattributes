@@ -1,3 +1,6 @@
 *.sh text eol=lf
 *.py text eol=lf
 *.yml text eol=lf
+# Firmware snapshots and their evidence must retain their original bytes,
+# including HEX line endings, so cross-platform checkouts preserve hashes.
+releases/** -text
