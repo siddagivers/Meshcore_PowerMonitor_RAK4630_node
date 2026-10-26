@@ -62,5 +62,9 @@ int main() {
   assert(negative.fields.size()==2 && negative.fields[1].value==-1);
   Encoder empty;pm::appendSolarReading(empty,112,pm::SolarHistory::Reading{});
   assert(empty.fields.size()==1 && empty.fields[0].value==0);
+  history.clear();
+  assert(history.state.day==0 && history.state.today_mwh==0);
+  for(const auto& bucket:history.state.buckets)
+    assert(bucket.utc==0 && bucket.mwh==0 && bucket.covered_ms==0);
   puts("PASS: rolling solar windows, gaps, persistence state, UTC days, clock rollback and telemetry units/signs");
 }

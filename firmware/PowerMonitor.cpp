@@ -9,6 +9,9 @@
 #include <memory>
 #include <new>
 #include <helpers/SensorManager.h>
+#if ENV_INCLUDE_INA260
+#error "PowerMonitor requires INA260 disabled: INA219 load monitor owns address 0x41"
+#endif
 using namespace Adafruit_LittleFS_Namespace;
 
 namespace pm {
@@ -155,7 +158,7 @@ void PowerMonitor::poll(uint32_t now,uint32_t utc) {
 }
 void PowerMonitor::clear() {
   solar_.counter=Integrator{};load_.counter=Integrator{};
-  today_solar_=today_load_=0;history_.state=SolarHistory::State{};
+  today_solar_=today_load_=0;history_.clear();
   history_.advance(utc_);
   if(checkpoint_enabled_)save();
 }

@@ -1,5 +1,8 @@
 # RAK4631 PowerMonitor 0.2.0-pi.1
 
+**Historical Mesh-America fork build. For the official meshcore-dev/MeshCore
+port without LoRa OTA, use version 0.3.0 or newer.**
+
 **Native on-demand telemetry; no periodic power-monitor floods.**
 
 Built on Raspberry Pi 5 / aarch64 Linux from clean source commit

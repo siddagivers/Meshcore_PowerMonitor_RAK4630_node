@@ -27,12 +27,12 @@ jobs:
         run: bash tests/run_tests.sh
       - name: Install firmware build dependencies
         run: python -m pip install -r requirements-build.txt
-      - name: Compile RAK4631 + RAK15001 image
-        run: bash scripts/build_on_pi.sh rak15001
+      - name: Compile official MeshCore RAK4631 image without LoRa OTA
+        run: bash scripts/build_on_pi.sh official
       - name: Upload versioned build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RAK4631_rak15001_PM_v${{ env.PM_VERSION }}
+          name: RAK4631_official_no_lora_ota_PM_v${{ env.PM_VERSION }}
           path: output/*
           if-no-files-found: error
       - name: Publish a GitHub pre-release only after successful compilation
@@ -47,5 +47,6 @@ jobs:
           fail_on_unmatched_files: true
           body: |
             Automated compiler-verified developer build.
+            Official meshcore-dev/MeshCore base; no LoRa OTA support.
             Hardware validation and bootloader pairing are not confirmed.
             Read the README and check the manifest + SHA256 before flashing.

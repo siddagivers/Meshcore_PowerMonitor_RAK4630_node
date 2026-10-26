@@ -2,28 +2,28 @@
 
 [![Versioned firmware build](https://github.com/siddagivers/Meshcore_PowerMonitor_RAK4630_node/actions/workflows/firmware.yml/badge.svg)](https://github.com/siddagivers/Meshcore_PowerMonitor_RAK4630_node/actions/workflows/firmware.yml)
 
-**Experimental MeshCore repeater firmware for solar-powered RAK4630/RAK4631**, integrating two INA219 power monitors at 20-ms target intervals, an MCP9808 temperature sensor, and the ordinary supported RAK WisBlock environmental sensors. RAK15001 SPI NOR remains owned by the OTA bootloader.
+**Official MeshCore v1.18.0-based experimental RAK4631 repeater firmware** with dual INA219 power monitoring, MCP9808 outside temperature, native RAK environmental sensors, and on-demand MeshCore telemetry. **LoRa OTA updates are not included.**
 
-## Version, status and supported hardware
+## Upstream, version and hardware
 
-* Firmware version: **0.2.0 development** (see [VERSION](VERSION)).
-* Successful CI build versions: `0.2.0-dev.N`, where `N` is the GitHub Actions run number.
-* Successful CI jobs publish a GitHub **pre-release** with a `v0.2.0-dev.N` tag, firmware files, SHA-256 hashes, and build metadata.
-* **Use 0.2.0 or newer for on-demand telemetry. Historical 0.1.0 binaries broadcast periodic flood reports and do not implement this behavior.**
-* The firmware contains the same version and source commit; read over USB with `pm version`.
-* **NOT yet bench-validated on a physical RAK4631.** Do not OTA-flash your only remote repeater with a development image.
-* This is an **nRF52840 / RAK4631 repeater build**, not the RAK3401 + RAK13302 1 W hardware.
+- Upstream: [meshcore-dev/MeshCore](https://github.com/meshcore-dev/MeshCore), pinned to **`81dbae592ffad40b4212bc0b37e82b38da08f4bc`**. Its repeater header identifies itself as **v1.18.0**.
+- Local PowerMonitor version: **0.3.0**, separate from upstream. `pm version` returns the local version and source SHA. This is a custom overlay on official source, not an unmodified official release.
+- Base target: **`RAK_4631_repeater`**; overlay target: `RAK_4631_repeater_power_monitor`. Nordic platform 11.0.0 and the upstream framework revision are pinned.
+- CI versions: `0.3.0-dev.N`; Pi builds can use `0.3.0-pi.1`. Successful CI jobs publish pre-releases with actual compiled images, hashes and manifests.
+- Hardware: **nRF52840 RAK4631 / RAK4630 module on a compatible WisBlock base**, not RAK3401 + RAK13302 1 W.
+- **0.1.x and 0.2.x artifacts used the Mesh-America fork**. They remain historical files, not official-upstream builds. 0.1.x also broadcasts power reports. Use 0.3.x for this official-upstream, on-demand, no-LoRa-OTA profile.
+- **No device was flashed; physical hardware/client behavior is not yet bench-validated.**
 
-| Hardware | Role | I2C address / bus | Poll target |
+| Hardware | Role | Address / interface | Schedule |
 | --- | --- | --- | --- |
-| Generic INA219 | Solar panel input power and accumulated mWh | `0x40` | **20 ms** |
-| RAK16000 INA219 | Actual load power *only when the shunt is wired in series with the load* | `0x41` | **20 ms** |
-| MCP9808 | Outside temperature | `0x18` | **60 s** |
-| RAK1906 BME680/BSEC | Inside enclosure: temperature, humidity, pressure, gas | Typically `0x76` or `0x77` | Native MeshCore schedule |
-| Other standard supported RAK sensors | Stock MeshCore sensors + radio/CLI | Their ordinary addresses | Native MeshCore schedule |
-| RAK15001 (2 MiB NOR) | Full/delta mOTA firmware staging | WisBlock SPI, sensor slot **C** | OTA only |
+| Generic INA219 | Solar input power / harvested energy | I2C `0x40` | 20-ms polling target |
+| RAK16000 INA219 | Load power when shunt is in series with the load | I2C `0x41` | 20-ms polling target |
+| MCP9808 | Outside temperature | I2C `0x18` | 60 s |
+| RAK1906 BME680/BSEC | Enclosure temperature, humidity, pressure, gas | Native upstream addresses | Native sensor schedule |
+| Other supported RAK sensors / GPS | Official RAK4631 sensor support | Native upstream interfaces | Native sensor schedule |
+| RAK15001 external flash | **Unused** | No external-flash driver or OTA staging added | None |
 
-The stock MeshCore INA219 sensor driver at `0x40` is left operational. The stock INA260 driver at `0x41` is disabled to prevent it confusing the second INA219 with an INA260. INA219 energy measurements do not require programming the INA219 calibration register: current is calculated from the directly measured shunt voltage and a configured physical shunt resistance.
+The stock INA219 sensor remains available. The stock INA260 driver is disabled because its default address `0x41` belongs to the second INA219; a compiler guard rejects builds that re-enable it. Other official RAK sensor support remains inherited. Energy integration uses direct shunt voltage and configured physical shunt resistance, independent of the INA219 calibration register.
 
 ## Electrical installation
 
@@ -45,7 +45,7 @@ The RAK19007 charge controller can power the board from solar energy and charge 
 
 **Shunts:** default `0.100 ohm` (typical R100 marking), both channels. Check resistor markings. A 100-milliohm shunt at 700 mA dissipates 49 mW; check shunt current rating and solder connections. If yours differs, edit the `PM_SOLAR_SHUNT_OHMS` / `PM_LOAD_SHUNT_OHMS` values in `scripts/inject.py` before building. Reverse polarity gives negative power; set `PM_SOLAR_SIGN` or `PM_LOAD_SIGN` to `-1` only after verifying the wiring.
 
-RAK15001 must occupy **sensor slot C** with the exact matched **RAK4631_RAK15001_C** firmware and compatible **OTAFIX** bootloader. A matching `.uf2` is an *application image* and cannot migrate a stock bootloader into the custom OTAFIX profile. Use the official board-specific combined bootloader + SoftDevice procedure for the one-time migration. Never install the RAK15001 profile on a RAK3401 + RAK13302 1 W board.
+This profile adds no LoRa OTA, OTAFIX, EndF trailer, or external-flash staging. It uses the official ExtraFS-safe linker script, limiting the application to `0x26000..0xD3FFF` and preserving the filesystem reservations. The standard RAK4631 board profile specifies S140 v6.1.1; the application cannot install a bootloader or SoftDevice. If a board previously used a custom OTAFIX bootloader, verify its existing bootloader/SoftDevice compatibility locally before changing profiles. No migration or flashing is performed here.
 
 ## What is measured, and how accurate is it?
 
@@ -59,7 +59,7 @@ The sampler polls both INA219 devices approximately every 20 ms while preserving
 * Keep sign: negative readings indicate reversed or genuinely bidirectional flow.
 * Store rolling solar 15-minute / 1-hour histories, current UTC-day totals, the previous completed UTC day, and all-time counters separately.
 
-**Important precision limits:** 20 ms is a *target polling interval*, not a guarantee. Radio servicing, other sensor drivers, I2C delays and time spent transmitting reports can delay the next sample. INA219's own ADC conversions further limit resolution, and brief TX peaks could still be missed or averaged. Totals should be calibrated against a reference power meter and must not be called exact to the last Wh.
+**Important precision limits:** 20 ms is a *target polling interval*, not a guarantee. Radio servicing, other sensor drivers, I2C delays and time spent answering telemetry requests can delay the next sample. INA219's own ADC conversions further limit resolution, and brief TX peaks could still be missed or averaged. Totals should be calibrated against a reference power meter and must not be called exact to the last Wh.
 
 Continuous polling keeps the nRF52840 awake, **raising the idle consumption** compared with sleeping MeshCore firmware. This is a measurement/testing build; afterwards you may choose a slower schedule.
 
@@ -86,7 +86,7 @@ Unsigned LPP current/power/energy fields are omitted for negative readings rathe
 
 Energy is still integrated from fast samples, then stored in **10-second history buckets**. Rolling queries omit the partially overlapping oldest bucket, so their boundary resolution is up to 10 seconds; that missing time reduces coverage. Coverage for rolling windows includes startup, outages and sampling gaps. UTC-day coverage compares actual measured time with elapsed time since midnight, or 24 hours for yesterday. Solar data before clock synchronization is not assigned to a calendar day.
 
-Cumulative counters, solar history buckets, today/yesterday solar totals, coverage and a sequence number are saved every 15 minutes and at UTC-day rollover to **two alternating checksummed InternalFS snapshots**. The snapshots use roughly 9 KiB together, share the existing 28-KiB InternalFS with normal repeater data, and never use the OTA-owned RAK15001. Insufficient filesystem space or a failed write is reported by checkpoint status; no partition boundary is expanded. Heap-backed snapshot buffers avoid overflowing the normal repeater loop stack. Sudden power loss can discard samples since the last checkpoint. Restored buckets keep their UTC timestamps, so downtime is not counted as measured time. Version-3 snapshots include this history; old version-2 snapshots are not imported, so upgrading from 0.1.0 starts fresh counters.
+Cumulative counters, solar history buckets, today/yesterday solar totals, coverage and a sequence number are saved every 15 minutes and at UTC-day rollover to **two alternating checksummed InternalFS snapshots**. The snapshots use roughly 9 KiB together, share the existing 28-KiB InternalFS with normal repeater data, and never use external flash. Insufficient filesystem space or a failed write is reported by checkpoint status; no partition boundary is expanded. Heap-backed snapshot buffers avoid overflowing the normal repeater loop stack. Sudden power loss can discard samples since the last checkpoint. Restored buckets keep their UTC timestamps, so downtime is not counted as measured time. Version-3 snapshots include this history; old version-2 snapshots are not imported, so upgrading from 0.1.0 starts fresh counters.
 
 ## USB and authenticated remote commands
 
@@ -118,58 +118,59 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-build.txt
 bash tests/run_tests.sh
-bash scripts/build_on_pi.sh rak15001
+bash scripts/build_on_pi.sh official
 ```
 
-Source is pinned to upstream [Mesh-America MeshCore](https://github.com/Mesh-America/mesh-america-quake-repeater) revision **`c908bb09e68ca81e1d19198776e0f2e5b7e48653`**. The injection script checks exact integration anchors, patches the repeater's main event loop and adds a separate PlatformIO environment called `RAK_4631_repeater_power_monitor`. **It never flashes connected hardware.**
+Source is cloned from official [meshcore-dev/MeshCore](https://github.com/meshcore-dev/MeshCore) into ignored `upstream-official/` and checked out at **`81dbae592ffad40b4212bc0b37e82b38da08f4bc`**. The strict overlay checks each integration anchor, adds sampling to the repeater loop, and appends power statistics to native telemetry after guest restrictions are applied. Remote text commands retain upstream admin authentication. Reset is accepted only by the local USB hook; a remote zero timestamp does not grant reset access. Long MCU sleeps are disabled for high-rate sampling. **The build script never uploads or flashes firmware.**
 
-Outputs are written to `output/` with names such as `RAK4631_rak15001_PM_v0.2.0-local.20261026210000.hex`, plus matching `.uf2` and `.bin` files. These are converted from the final HEX **after** the upstream EndF/layout trailer is appended. Packaging rejects HEX data outside the application interval `0x26000..0xECFFF`. The raw BIN starts at **0x26000**, contains application data only, and is not a combined bootloader/SoftDevice image. UF2 embeds destination addresses and uses the nRF52840 family ID `0xADA52840`. Each build also produces `.sha256` and JSON metadata with the exact build's source commit, upstream revision, UTC date and output-file hashes. **Do not rename a BIN to UF2.**
+Use `bash scripts/build_on_pi.sh official`, or omit the argument. Previous `rak15001`, `w25q16` and `unified` arguments are rejected rather than silently selecting another hardware profile.
 
-Alternative build targets (different **hardware and bootloader**):
-* `bash scripts/build_on_pi.sh w25q16` — RAK4631 with separately wired Winbond W25Q16 flash, matching dedicated application and bootloader.
-* `bash scripts/build_on_pi.sh unified` — adaptive RAK4631 storage target, appropriate matching bootloader mandatory.
+Outputs use `RAK4631_official_no_lora_ota_PM_v0.3.0-pi.1` names under `output/`: HEX, BIN, UF2, `.sha256` and manifest `.json`. The manifest records the official upstream URL/revision/version, local source commit, UTC build time, image sizes/hashes, application bounds, and `lora_ota: false`.
 
-The 1 W RAK3401 + RAK13302 project is separate: [Lora_OT_Lora_UPDATE_1wRak](https://github.com/siddagivers/Lora_OT_Lora_UPDATE_1wRak).
+The raw BIN starts at **0x26000**. UF2 embeds destination addresses and uses family **0xADA52840**. Packaging rejects data at or above **0xD4000**, preserving the official ExtraFS reservation. These are application-only images, not combined bootloader/SoftDevice images or LoRa OTA packages. No custom EndF/OTAFIX trailer is generated. **Do not rename BIN to UF2 or use these images with the old fork's OTA apply commands.**
+
+The separate 1 W RAK3401 + RAK13302 project remains [Lora_OT_Lora_UPDATE_1wRak](https://github.com/siddagivers/Lora_OT_Lora_UPDATE_1wRak).
 
 ## GitHub Actions builds, releases and versioning
 
-The workflow [`.github/workflows/firmware.yml`](.github/workflows/firmware.yml) runs the C++ host integration test and builds the RAK15001 configuration from scratch on each push to `main`, or via **Actions > Versioned RAK4631 firmware > Run workflow**.
+The workflow [`.github/workflows/firmware.yml`](.github/workflows/firmware.yml) runs the C++ host integration test and builds the official no-LoRa-OTA RAK4631 configuration from scratch on each push to `main`, or via **Actions > Versioned RAK4631 firmware > Run workflow**.
 
-* **Development build:** repository `VERSION` = `0.2.0`; Actions run number = `N`; binary reports `0.2.0-dev.N`.
+* **Development build:** repository `VERSION` = `0.3.0`; Actions run number = `N`; binary reports `0.3.0-dev.N`.
 * **CI artifacts:** every *successful* job provides a downloadable versioned archive under its Actions run.
-* **GitHub Releases:** once the compiler and tests pass, the workflow publishes `v0.2.0-dev.N` as a **pre-release** with actual compiled files plus hashes. A failed build **must not** produce a flashable release.
+* **GitHub Releases:** once the compiler and tests pass, the workflow publishes `v0.3.0-dev.N` as a **pre-release** with actual compiled files plus hashes. A failed build **must not** produce a flashable release.
 * **Traceability:** `pm version` and the adjacent build-manifest JSON identify the exact source commit.
 
 Version policy: increment `VERSION` for intentional feature/compatibility changes; CI run numbers disambiguate rebuilds of the same source revision. Pre-release means **not hardware-qualified**. Only upgrade to a stable `v1.0.0` after bench tests, 1-hour cumulative measurement comparison, unexpected-reset tests, and a successful recovery drill.
 
 ## Hardware verification before installing remotely
 
-### Compiler verification, 26 October 2026
+### Compiler and test verification
 
-The RAK15001 slot-C target was compiled on a Raspberry Pi 5 running 64-bit Linux, using Python 3.11, PlatformIO 6.2.0, Nordic nRF52 platform 11.0.0 and GCC ARM 14.2.1. Host integrator and history tests passed (constant load, simulated TX burst, missing samples, signed power, timer wrap, rolling histories, UTC day rollover, stored-state recovery and telemetry units). The full build passed the upstream runtime-RAM and compiled Bluetooth DFU-handoff checks; it used approximately 551 kB of application flash and 100 kB of static RAM. HEX, BIN and UF2 packaging completed with the `RAK4631_RAK15001_C` EndF identity and unchanged application/bootloader boundaries.
+Host tests cover the integrator, signed readings, timer wrap, rolling histories, gaps, restored state, UTC midnight rollover, skipped days, clock rollback and telemetry units. Versioned Pi snapshots in `releases/` include build logs, source manifests and artifact-verification evidence. The official port uses ordinary PlatformIO size checks; old fork-specific runtime-RAM and DFU-handoff checks are **not** part of this build. Compiler success is not a physical sensor, radio, bootloader, power-interruption, or client presentation test.
 
-This resolves the run-3 flash overflow and the Pi's missing IntelHex packaging dependency. Versioned Pi-built files are kept in `releases/`; each manifest identifies the source commit used to build them, which can precede the commit adding the artifacts. CI builds remain available through Actions and pre-releases. **Compiler and host-test success do not verify radio behavior, sensor accuracy, checkpoint recovery, or OTA operation on physical hardware. No flash or OTA apply was performed.** Only the `rak15001` target was compiled in this verification; the alternative storage targets remain unverified.
+This build uses GCC ARM 14.2.1 and `-Os`, removing the framework's `-Ofast`. No application region is enlarged and no fork OTA/framework patches are copied over.
+
+The official-source port compiled on a Raspberry Pi 5 running aarch64 Linux, using approximately **366 kB flash / 42 kB static RAM**. Its versioned manifest records exact sizes. Counter reset clears history in place, avoiding a multi-kilobyte temporary on the stock Arduino loop stack; snapshot buffers remain heap-backed.
 
 ### Bench and recovery checklist
 
-1. Confirm RAK4631 core identity and placement of RAK15001 in slot C; install and verify the exact-board OTAFIX bootloader **locally**.
+1. Confirm RAK4631 core identity and standard board/SoftDevice/bootloader compatibility locally. This application does not install them.
 2. Verify normal MeshCore radio operation on the bench before using experimental power-monitor images.
 3. Use `pm version` and `pm sensors` over USB to confirm all three I2C devices and the desired firmware SHA.
 4. Put a known load in series with INA219 `0x41`; measure bus voltage and peak TX current with a separate reference meter.
 5. Request telemetry after 15 minutes and 1 hour, and across UTC midnight; compare rolling/day mWh and coverage with a calibrated power meter. Check wake/idle power penalty.
-6. Check `ota self`, `ota status`, `ota qspi` on a matching OTA-enabled repeater. Expect RAK15001 JEDEC `C84015`, 2048 KiB, and a capable bootloader.
+6. Verify the application ends below `0xD4000` and ordinary USB recovery works locally; LoRa OTA is outside this profile.
 7. Test watchdog/reset/checkpoint behavior, reboots and power interruptions. Only then plan a remote deployment.
 
 ### Troubleshooting
 
-* Linker reports `region FLASH overflowed`: the storage-specific upstream profiles override `build_unflags`, which can leave the framework's `-Ofast` enabled despite the inherited `-Oz`. The power-monitor overlay explicitly removes `-Ofast` while preserving the storage profile's macro removals. Keep the original linker script and application boundaries; expanding the flash region can overwrite filesystem or bootloader storage.
-* HEX packaging reports `No module named 'intelhex'`: activate the same venv used for PlatformIO and run `pip install -r requirements-build.txt`. IntelHex is required by the upstream EndF identity hook; bypassing that hook would produce a different OTA artifact.
+* Linker overflow: do not enlarge the application region. Check the official ExtraFS-safe limit and resolved `-Os` compiler flags.
+* Missing `intelhex`: activate the build venv and run `pip install -r requirements-build.txt`; IntelHex converts the official application HEX to BIN.
 * Pi SSH reports `Permission denied (publickey,password)`: specify the installed private key with `ssh -i <private-key-path> -o IdentitiesOnly=yes pi@<pi-address>`. A successful TCP connection followed by this error is an authentication problem. A timeout or unreachable route is a network problem; try the Pi's LAN address while on its LAN, or its Tailscale address with an active Tailscale connection. Never commit SSH private keys or passwords.
 * `solar40:MISSING`: check the generic INA219's A0/A1 address and I2C pull-ups; verify 3.3 V logic.
 * `load41:MISSING`: RAK16000 must actually use `0x41`; verify I2C connection.
 * `mcp18:MISSING`: MCP9808 should be `0x18`; check its A0/A1/A2 straps.
 * 0 or incorrect energy: check series shunt wiring, direction and resistor value; do not confuse battery current with repeater consumption.
-* `QSPI store:ERR`: recheck RAK15001 slot C, flash module identity, and exact bootloader pairing.
 * Build failure: open GitHub Actions logs; do not flash an unverified artifact.
 * Missing power telemetry: login with environment-sensor access, explicitly refresh telemetry, and verify UTC time. Use the authenticated admin console with `pm solar 15m` for precise diagnostic output.
 
@@ -179,5 +180,4 @@ This resolves the run-3 flash overflow and the Pi's missing IntelHex packaging d
 
 * [Texas Instruments INA219](https://www.ti.com/product/INA219)
 * [RAK16000 module](https://docs.rakwireless.com/product-categories/wisblock/rak16000/)
-* [RAK4631 + RAK15001 OTAFIX pairing and QSPI support](https://github.com/Mesh-America/mesh-america-quake-repeater/blob/c908bb09e68ca81e1d19198776e0f2e5b7e48653/docs/ota_nrf52_qspi.md)
-* [MeshCore upstream build configurations](https://github.com/Mesh-America/mesh-america-quake-repeater/blob/c908bb09e68ca81e1d19198776e0f2e5b7e48653/variants/rak4631/platformio.ini)
+* [Official MeshCore RAK4631 configuration](https://github.com/meshcore-dev/MeshCore/blob/81dbae592ffad40b4212bc0b37e82b38da08f4bc/variants/rak4631/platformio.ini)

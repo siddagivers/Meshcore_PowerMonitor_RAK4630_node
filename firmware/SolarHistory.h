@@ -19,6 +19,14 @@ public:
     uint32_t today_ms=0, previous_ms=0;
     Bucket buckets[BUCKET_COUNT]{};
   } state;
+  void clear() {
+    // Reset in place: a State{} assignment can create a >4-KiB temporary
+    // on the official Arduino loop task's small stack.
+    state.day=state.previous_day=state.last_utc=0;
+    state.today_mwh=state.previous_mwh=0;
+    state.today_ms=state.previous_ms=0;
+    for(auto& bucket:state.buckets)bucket=Bucket{};
+  }
   struct Reading {
     double mwh;
     uint32_t covered_ms, span_ms;
