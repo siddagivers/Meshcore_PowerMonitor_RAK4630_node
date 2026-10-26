@@ -108,14 +108,14 @@ git clone https://github.com/siddagivers/Meshcore_PowerMonitor_RAK4630_node.git
 cd Meshcore_PowerMonitor_RAK4630_node
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -U platformio
+pip install -r requirements-build.txt
 bash tests/run_tests.sh
 bash scripts/build_on_pi.sh rak15001
 ```
 
 Source is pinned to upstream [Mesh-America MeshCore](https://github.com/Mesh-America/mesh-america-quake-repeater) revision **`c908bb09e68ca81e1d19198776e0f2e5b7e48653`**. The injection script checks exact integration anchors, patches the repeater's main event loop and adds a separate PlatformIO environment called `RAK_4631_repeater_power_monitor`. **It never flashes connected hardware.**
 
-Outputs are written to `output/` with names such as `RAK4631_rak15001_PM_v0.1.0-local.20261026210000.hex`; when supported by the toolchain, matching `.uf2` and `.bin` files are also collected. Each build also produces `.sha256` and JSON metadata with the exact build's source commit, upstream revision, UTC date and output-file hashes. **Do not rename a BIN to UF2.**
+Outputs are written to `output/` with names such as `RAK4631_rak15001_PM_v0.1.0-local.20261026210000.hex`, plus matching `.uf2` and `.bin` files. These are converted from the final HEX **after** the upstream EndF/layout trailer is appended. Packaging rejects HEX data outside the application interval `0x26000..0xECFFF`. The raw BIN starts at **0x26000**, contains application data only, and is not a combined bootloader/SoftDevice image. UF2 embeds destination addresses and uses the nRF52840 family ID `0xADA52840`. Each build also produces `.sha256` and JSON metadata with the exact build's source commit, upstream revision, UTC date and output-file hashes. **Do not rename a BIN to UF2.**
 
 Alternative build targets (different **hardware and bootloader**):
 * `bash scripts/build_on_pi.sh w25q16` — RAK4631 with separately wired Winbond W25Q16 flash, matching dedicated application and bootloader.
@@ -136,6 +136,14 @@ Version policy: increment `VERSION` for intentional feature/compatibility change
 
 ## Hardware verification before installing remotely
 
+### Compiler verification, 26 October 2026
+
+The RAK15001 slot-C target was compiled on a Raspberry Pi 5 running 64-bit Linux, using Python 3.11, PlatformIO 6.2.0, Nordic nRF52 platform 11.0.0 and GCC ARM 14.2.1. Host integrator tests passed (constant load, simulated TX burst, missing samples, signed power and timer wrap). The full build passed the upstream runtime-RAM and compiled Bluetooth DFU-handoff checks; it used approximately 549 kB of application flash and 96 kB of static RAM. HEX, BIN and UF2 packaging completed with the `RAK4631_RAK15001_C` EndF identity and unchanged application/bootloader boundaries.
+
+This resolves the run-3 flash overflow and the Pi's missing IntelHex packaging dependency. Versioned Pi-built files are kept in `releases/`; each manifest identifies the source commit used to build them, which can precede the commit adding the artifacts. CI builds remain available through Actions and pre-releases. **Compiler and host-test success do not verify radio behavior, sensor accuracy, checkpoint recovery, or OTA operation on physical hardware. No flash or OTA apply was performed.** Only the `rak15001` target was compiled in this verification; the alternative storage targets remain unverified.
+
+### Bench and recovery checklist
+
 1. Confirm RAK4631 core identity and placement of RAK15001 in slot C; install and verify the exact-board OTAFIX bootloader **locally**.
 2. Verify normal MeshCore radio operation on the bench before using experimental power-monitor images.
 3. Use `pm version` and `pm sensors` over USB to confirm all three I2C devices and the desired firmware SHA.
@@ -146,6 +154,9 @@ Version policy: increment `VERSION` for intentional feature/compatibility change
 
 ### Troubleshooting
 
+* Linker reports `region FLASH overflowed`: the storage-specific upstream profiles override `build_unflags`, which can leave the framework's `-Ofast` enabled despite the inherited `-Oz`. The power-monitor overlay explicitly removes `-Ofast` while preserving the storage profile's macro removals. Keep the original linker script and application boundaries; expanding the flash region can overwrite filesystem or bootloader storage.
+* HEX packaging reports `No module named 'intelhex'`: activate the same venv used for PlatformIO and run `pip install -r requirements-build.txt`. IntelHex is required by the upstream EndF identity hook; bypassing that hook would produce a different OTA artifact.
+* Pi SSH reports `Permission denied (publickey,password)`: specify the installed private key with `ssh -i <private-key-path> -o IdentitiesOnly=yes pi@<pi-address>`. A successful TCP connection followed by this error is an authentication problem. A timeout or unreachable route is a network problem; try the Pi's LAN address while on its LAN, or its Tailscale address with an active Tailscale connection. Never commit SSH private keys or passwords.
 * `solar40:MISSING`: check the generic INA219's A0/A1 address and I2C pull-ups; verify 3.3 V logic.
 * `load41:MISSING`: RAK16000 must actually use `0x41`; verify I2C connection.
 * `mcp18:MISSING`: MCP9808 should be `0x18`; check its A0/A1/A2 straps.

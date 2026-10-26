@@ -79,6 +79,11 @@ void loop() {
         "\n; RAK4631 power monitor overlay (2 INA219 + MCP9808)\n"
         "[env:RAK_4631_repeater_power_monitor]\n"
         "extends = env:"+base+"\n"
+        # Storage profiles override nrf52_base.build_unflags, losing its
+        # removal of the framework's -Ofast. Restore size optimization while
+        # preserving the exact storage profile's macro removals.
+        "build_unflags = ${env:"+base+".build_unflags}\n"
+        "  -Ofast\n"
         "build_flags = ${env:"+base+".build_flags}\n"
         "  -DPM_SAMPLE_MS=20\n"
         "  -DPM_REPORT_MS=900000\n"

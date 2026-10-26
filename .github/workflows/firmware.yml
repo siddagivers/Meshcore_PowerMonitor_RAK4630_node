@@ -25,8 +25,8 @@ jobs:
           echo "PM_SOURCE_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
       - name: Run host unit tests
         run: bash tests/run_tests.sh
-      - name: Install PlatformIO
-        run: python -m pip install --upgrade platformio
+      - name: Install firmware build dependencies
+        run: python -m pip install -r requirements-build.txt
       - name: Compile RAK4631 + RAK15001 image
         run: bash scripts/build_on_pi.sh rak15001
       - name: Upload versioned build artifact
