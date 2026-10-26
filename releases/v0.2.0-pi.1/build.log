@@ -1,0 +1,132 @@
+From https://github.com/Mesh-America/mesh-america-quake-repeater
+ * branch              c908bb09e68ca81e1d19198776e0f2e5b7e48653 -> FETCH_HEAD
+HEAD is now at c908bb09 Merge pull request #33 from Mesh-America/next
+M	examples/simple_repeater/MyMesh.cpp
+M	examples/simple_repeater/main.cpp
+M	variants/rak4631/platformio.ini
+Patched MeshCore 0.2.0-pi.1 storage rak15001 upstream /home/pi/Meshcore_PowerMonitor_RAK4630_node/upstream
+Processing RAK_4631_repeater_power_monitor (board: rak4631; platform: nordicnrf52; framework: arduino)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+Device OTA DEFLATE: qualified infrastructure role; bounded per-block encoder
+nRF52 infrastructure flash trim: compact crypto, unused USB device classes/GPS cache/vendor splash, compact OTA target names
+CONFIGURATION: https://docs.platformio.org/page/boards/nordicnrf52/rak4631.html
+PLATFORM: Nordic nRF52 (11.0.0) > WisCore RAK4631 Board
+HARDWARE: NRF52840 64MHz, 243KB RAM, 796KB Flash
+DEBUG: Current (jlink) External (jlink, stlink)
+PACKAGES: 
+ - framework-arduinoadafruitnrf52 @ 1.10701.0+sha.d5413016 
+ - framework-cmsis @ 2.50700.210515 (5.7.0) 
+ - tool-adafruit-nrfutil @ 1.503.0 (5.3) 
+ - tool-sreccat @ 1.164.0 (1.64) 
+ - toolchain-gccarmnoneeabi @ 1.140201.0 (14.2.1)
+nRF52 loop stack: explicit LTO-safe core task policy enabled
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 47 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- SPI @ 1.0
+|-- Wire @ 1.0
+|-- RadioLib @ 7.7.1+sha.187ef2479
+|-- Crypto @ 0.4.0
+|-- RTClib @ 2.1.4
+|-- Melopero RV3028 @ 1.2.0
+|-- CayenneLPP @ 1.6.1
+|-- CustomLFS @ 0.2.1+sha.b3928ea
+|-- Adafruit INA3221 Library @ 1.0.1
+|-- Adafruit INA219 @ 1.2.3
+|-- INA226 @ 0.6.6
+|-- Adafruit INA260 Library @ 1.5.4
+|-- Adafruit AHTX0 @ 2.0.6
+|-- Adafruit BME280 Library @ 2.3.0
+|-- Adafruit BMP280 Library @ 2.6.8
+|-- Adafruit SHTC3 Library @ 1.0.2
+|-- Sensirion I2C SHT4x @ 1.1.2
+|-- Arduino_LPS22HB @ 1.0.3
+|-- Adafruit MLX90614 Library @ 2.1.7
+|-- Adafruit_VL53L0X @ 1.2.5
+|-- MicroNMEA @ 2.0.6
+|-- Adafruit BME680 Library @ 2.0.6
+|-- Adafruit BMP085 Library @ 1.2.4
+|-- Adafruit SSD1306 @ 2.5.17
+|-- SparkFun u-blox GNSS Arduino Library @ 2.2.29
+|-- BSEC Software Library @ 1.8.1492
+|-- Adafruit Little File System Libraries @ 0.11.0
+|-- Adafruit Internal File System on Bluefruit nRF52 @ 0.11.0
+|-- nrf52
+|-- Adafruit nRFCrypto
+|-- ed25519
+|-- ArduinoJson @ 7.4.3
+|-- Adafruit TinyUSB Library @ 3.7.0
+|-- Adafruit Bluefruit nRF52 Libraries @ 0.21.0
+|-- Adafruit GFX Library @ 1.13.0
+nRF52 USB: build-local bounded startup/session fix enabled
+nRF52 USB: build-local bounded startup/session fix enabled
+nRF52 USB: build-local bounded startup/session fix enabled
+nRF52 flash: build-local verified flush fix enabled for InternalFileSystem.cpp
+nRF52 flash: build-local verified flush fix enabled for flash_cache.c
+nRF52 flash: build-local verified flush fix enabled for flash_nrf5x.c
+nRF52 BLE: private framework fix in BLEConnection.cpp
+nRF52 BLE: private framework fix in BLEGatt.cpp
+nRF52 BLE: private framework fix in bluefruit.cpp
+nRF52 BLE: private FreeRTOS-safe DFU handoff
+Building in release mode
+Compiling .pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/MyMesh.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/PowerMonitor.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/main.cpp.o
+Linking .pio/build/RAK_4631_repeater_power_monitor/firmware.elf
+check([".pio/build/RAK_4631_repeater_power_monitor/firmware.elf"], [".pio/build/RAK_4631_repeater_power_monitor/nrf52-flash-trim/Cc310DomainTrim.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/Adafruit_TinyUSB_API.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/Adafruit_USBD_CDC.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/Adafruit_USBD_Device.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/Adafruit_USBD_Interface.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/Adafruit_USBH_Host.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/cdc/Adafruit_USBH_CDC.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/hid/Adafruit_USBD_HID.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/midi/Adafruit_USBD_MIDI.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/msc/Adafruit_USBD_MSC.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/msc/Adafruit_USBH_MSC.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/ports/ch32/Adafruit_TinyUSB_ch32.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/ports/esp32/Adafruit_TinyUSB_esp32.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/patched-nrf52-usb/Adafruit_TinyUSB_nrf.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/ports/rp2040/Adafruit_TinyUSB_rp2040.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/ports/samd/Adafruit_TinyUSB_samd.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/video/Adafruit_USBD_Video.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/webusb/Adafruit_USBD_WebUSB.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/audio/audio_device.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/bth/bth_device.c.o", ".pio/build/RAK_4631_repeater_power_monitor/patched-nrf52-usb/cdc_device.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/cdc/cdc_host.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/dfu/dfu_device.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/dfu/dfu_rt_device.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/hid/hid_device.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/hid/hid_host.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/midi/midi_device.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/midi/midi_host.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/msc/msc_device.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/msc/msc_host.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/net/ecm_rndis_device.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/net/ncm_device.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/usbtmc/usbtmc_device.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/vendor/vendor_device.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/video/video_device.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/common/tusb_fifo.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/device/usbd.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/device/usbd_control.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/host/hub.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/host/usbh.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/analog/max3421/hcd_max3421.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/microchip/samd/dcd_samd.c.o", ".pio/build/RAK_4631_repeater_power_monitor/patched-nrf52-usb/dcd_nrf5x.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/raspberrypi/pio_usb/dcd_pio_usb.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/raspberrypi/pio_usb/hcd_pio_usb.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/raspberrypi/rp2040/dcd_rp2040.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/raspberrypi/rp2040/hcd_rp2040.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/raspberrypi/rp2040/rp2040_usb.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/st/stm32_fsdev/dcd_stm32_fsdev.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/synopsys/dwc2/dcd_dwc2.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/synopsys/dwc2/dwc2_common.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/synopsys/dwc2/hcd_dwc2.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/wch/dcd_ch32_usbfs.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/wch/dcd_ch32_usbhs.c.o", ".pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/tusb.c.o", ".pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/MyMesh.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/MyMeshQuake.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/PowerMonitor.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/UITask.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/main.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/variants/rak4631/RAK4631Board.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/variants/rak4631/target.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/variants/rak4631/variant.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/Dispatcher.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/Identity.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/Mesh.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/MeshCoreImageIdentity.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/Nrf52LoopStack.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/Packet.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/Utils.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/armstubs.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/AdvertDataHelpers.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/AlertReporter.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ArduinoHelpers.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ArduinoSerialInterface.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/AtomicFileWriter.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/AutoDiscoverRTCClock.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/BaseChatMesh.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ClientACL.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/CommonCLI.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/CommonCLI_Management.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/CommonCLI_Observer.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/CommonRadioPrefs.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/CompanionDelayedReplies.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/CompanionMqttSetupPortal.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/CompanionNotificationPolicy.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/CompanionReader.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ConfigSerializer.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ContactInfo.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/DynamicConfigSerializer.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ESP32Board.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ESP32TrueRandom.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ESP32WsTransportFix.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/FloodAdvertLimiter.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/IdentityStore.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/MQTTPayloadBuilder.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ManagementReport.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ManagementReporter.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/MeshClockSync.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/NRF52Board.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/NRF52Crypto.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/NRF52VoltagePolicy.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/NetworkLink.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/RTC_RX8130CE.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/RadioProfileCLI.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/RegionMap.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/SNMPAgent.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/SensorManager.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/StaticPoolPacketManager.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/StorageLayout.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/TransportKeyStore.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/TxtDataHelpers.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/UsbLogging.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/UsbLoggingClientActivity.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/UsbLoggingLineStateOverride.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/UsbLoggingWatchdog.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/UserGpio.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/WiFiSetupPortal.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/bridges/BridgeBase.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/CompanionOtaConfig.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/FirmwareInfo.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/FolderMotaStore.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/MerkleTree.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/MotaContainer.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/MotaSourceSerial.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaApply.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaCacheSdNrf52.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaCli.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaContext.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaDeflate.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaManager.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaProtocol.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaSelf.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaSpeedConfig.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaStoreFlashEsp32.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaStoreFlashNrf52.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaStoreQspiNrf52.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaStoreSdNrf52.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaTinf.c.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ota/OtaVerify.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/radiolib/RadioLibWrappers.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/sensors/ClockFloor.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/sensors/D7S.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/sensors/EnvironmentSensorManager.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/sensors/RAK12035_SoilMoisture.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/sensors/SeismicAlert.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ui/DisplayDriver.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ui/DisplayPowerSettings.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ui/MomentaryButton.cpp.o", ".pio/build/RAK_4631_repeater_power_monitor/src/helpers/ui/SSD1306Display.cpp.o"])
+nRF52 Bluetooth DFU: safe compiled handoff PASS
+check(["checkprogsize"], [".pio/build/RAK_4631_repeater_power_monitor/firmware.elf"])
+check([".pio/build/RAK_4631_repeater_power_monitor/firmware.hex"], [".pio/build/RAK_4631_repeater_power_monitor/firmware.elf"])
+Runtime RAM: 135,564 internal bytes available; 72,072 required; largest region 135,564; PASS
+check(["checkprogsize"], [".pio/build/RAK_4631_repeater_power_monitor/firmware.elf"])
+Runtime RAM: 135,564 internal bytes available; 72,072 required; largest region 135,564; PASS
+check([".pio/build/RAK_4631_repeater_power_monitor/firmware.hex"], [".pio/build/RAK_4631_repeater_power_monitor/firmware.elf"])
+nRF52 Bluetooth DFU: safe compiled handoff PASS
+Checking size .pio/build/RAK_4631_repeater_power_monitor/firmware.elf
+nRF52 Bluetooth DFU: safe compiled handoff PASS
+Building .pio/build/RAK_4631_repeater_power_monitor/firmware.hex
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [====      ]  40.2% (used 99948 bytes from 248832 bytes)
+Flash: [=======   ]  67.6% (used 551044 bytes from 815104 bytes)
+_append_endf_hex([".pio/build/RAK_4631_repeater_power_monitor/firmware.hex"], [".pio/build/RAK_4631_repeater_power_monitor/firmware.elf"])
+EndF: appended to firmware.hex at 0xAC89C (app=0x26000.. body_len=551068 body_hash=d9cca60f044e8a76 stage=0xED000 target=0x45948bd7 hw='RAK4631_RAK15001_C' fw=0x01110100)
+check([".pio/build/RAK_4631_repeater_power_monitor/firmware.zip"], [".pio/build/RAK_4631_repeater_power_monitor/firmware.hex"])
+Runtime RAM: 135,564 internal bytes available; 72,072 required; largest region 135,564; PASS
+check([".pio/build/RAK_4631_repeater_power_monitor/firmware.zip"], [".pio/build/RAK_4631_repeater_power_monitor/firmware.hex"])
+nRF52 Bluetooth DFU: safe compiled handoff PASS
+Building .pio/build/RAK_4631_repeater_power_monitor/firmware.zip
+Zip created at .pio/build/RAK_4631_repeater_power_monitor/firmware.zip
+========================= [SUCCESS] Took 61.31 seconds =========================
+
+Environment                      Status    Duration
+-------------------------------  --------  ------------
+RAK_4631_repeater_power_monitor  SUCCESS   00:01:01.307
+========================= 1 succeeded in 00:01:01.307 =========================
+Converted to uf2, output size: 1102336, start address: 0x26000
+Wrote 1102336 bytes to /home/pi/Meshcore_PowerMonitor_RAK4630_node/upstream/.pio/build/RAK_4631_repeater_power_monitor/firmware.uf2
+{
+  "version": "0.2.0-pi.1",
+  "source_commit": "169b96e59ecb0e948e0c7ccdaf055e4234bca6a1",
+  "upstream": "c908bb09e68ca81e1d19198776e0f2e5b7e48653",
+  "target": "RAK_4631_repeater_power_monitor",
+  "storage": "rak15001",
+  "built_utc": "2026-10-26T22:11:52.319843+00:00",
+  "firmware": {
+    "RAK4631_rak15001_PM_v0.2.0-pi.1.bin": {
+      "bytes": 551124,
+      "sha256": "129ca3a3417c3095c0dfb9bda9baa2a2d0ded18e2094f877bb98be44c778159c"
+    },
+    "RAK4631_rak15001_PM_v0.2.0-pi.1.hex": {
+      "bytes": 1515776,
+      "sha256": "7dd4b85f88cf3d8cf768d5cb743bef0985fa5c68ec4a3f4b2bbf43a51f604d01"
+    },
+    "RAK4631_rak15001_PM_v0.2.0-pi.1.uf2": {
+      "bytes": 1102336,
+      "sha256": "830378c3cd9f66396a95bbb7bb2ae4be78060b79c2537ea7e6a44cbc8cc9ffee"
+    }
+  }
+}
+Compiled version 0.2.0-pi.1. Artifacts: /home/pi/Meshcore_PowerMonitor_RAK4630_node/output

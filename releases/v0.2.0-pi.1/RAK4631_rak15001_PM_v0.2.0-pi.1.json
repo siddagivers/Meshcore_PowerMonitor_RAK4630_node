@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0-pi.1",
+  "source_commit": "169b96e59ecb0e948e0c7ccdaf055e4234bca6a1",
+  "upstream": "c908bb09e68ca81e1d19198776e0f2e5b7e48653",
+  "target": "RAK_4631_repeater_power_monitor",
+  "storage": "rak15001",
+  "built_utc": "2026-10-26T22:11:52.319843+00:00",
+  "firmware": {
+    "RAK4631_rak15001_PM_v0.2.0-pi.1.bin": {
+      "bytes": 551124,
+      "sha256": "129ca3a3417c3095c0dfb9bda9baa2a2d0ded18e2094f877bb98be44c778159c"
+    },
+    "RAK4631_rak15001_PM_v0.2.0-pi.1.hex": {
+      "bytes": 1515776,
+      "sha256": "7dd4b85f88cf3d8cf768d5cb743bef0985fa5c68ec4a3f4b2bbf43a51f604d01"
+    },
+    "RAK4631_rak15001_PM_v0.2.0-pi.1.uf2": {
+      "bytes": 1102336,
+      "sha256": "830378c3cd9f66396a95bbb7bb2ae4be78060b79c2537ea7e6a44cbc8cc9ffee"
+    }
+  }
+}

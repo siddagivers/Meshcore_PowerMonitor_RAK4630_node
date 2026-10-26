@@ -1,0 +1,15 @@
+{
+  "result": "PASS",
+  "version": "0.2.0-pi.1",
+  "source_commit": "169b96e59ecb0e948e0c7ccdaf055e4234bca6a1",
+  "binary_bytes": 551124,
+  "hex_min": "0x26000",
+  "hex_max": "0xac8d3",
+  "uf2_blocks": 2153,
+  "checks": [
+    "manifest sizes and SHA256",
+    "HEX/BIN exact equivalence",
+    "UF2 magic, family, addresses, ordering and HEX byte equivalence",
+    "embedded version and source revision"
+  ]
+}
