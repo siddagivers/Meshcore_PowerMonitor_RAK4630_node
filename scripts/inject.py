@@ -15,7 +15,7 @@ def main():
     cli=argparse.ArgumentParser()
     cli.add_argument("upstream",type=Path)
     cli.add_argument("--storage",choices=["rak15001","w25q16","unified"],default="rak15001")
-    cli.add_argument("--version",default="0.1.0-local")
+    cli.add_argument("--version",default="0.2.0-local")
     cli.add_argument("--source-sha",default="unknown")
     args=cli.parse_args()
     for label,value in [("version",args.version),("SHA",args.source_sha)]:
@@ -25,7 +25,7 @@ def main():
     main_file=args.upstream/"examples/simple_repeater/main.cpp"
     text=main_file.read_text()
     text=replace_one(text,'#include "MyMesh.h"',
-        '#include "MyMesh.h"\n#include "PowerMonitor.h"\nstatic pm::PowerMonitor power_monitor;',
+        '#include "MyMesh.h"\n#include "PowerMonitor.h"\npm::PowerMonitor power_monitor;',
         "main includes")
     text=replace_one(text,'  sensors.begin();\n  mesh::hilStartupTrace("sensors_ready");',
         '  sensors.begin();\n  power_monitor.begin(!volatile_primary_fs);\n  mesh::hilStartupTrace("sensors_ready");',
@@ -40,27 +40,35 @@ def main():
     }
     if (strlen(command) == static_cast<size_t>(len))'''
     text=replace_one(text,needle,repl,"serial CLI")
-    needle='void loop() {\n  mesh::serviceUsbLoggingPort();'
-    repl='''static bool publishPowerReport(const char* message) {
-  // Use MeshCore's own encrypted Repeaters group and duty-cycle-aware queue.
-  char cmd[182];
-  const int n=snprintf(cmd,sizeof(cmd),"send text.flood %s",message);
-  if(n<0 || n>=(int)sizeof(cmd))return false;
-  char reply[160]={};
-  the_mesh.handleUsbCommand(cmd,reply);
-  return strncmp(reply,"OK",2)==0;
-}
-void loop() {
-  mesh::serviceUsbLoggingPort();'''
-    text=replace_one(text,needle,repl,"MeshCore report hook")
     text=replace_one(text,"  the_mesh.loop();\n  sensors.loop();",
-        "  the_mesh.loop();\n  power_monitor.poll(millis(),rtc_clock.getCurrentTime(),publishPowerReport);\n  sensors.loop();",
+        "  the_mesh.loop();\n  power_monitor.poll(millis(),rtc_clock.getCurrentTime());\n  sensors.loop();",
         "sensor polling")
     text=replace_one(text,"  if (can_power_save) {\n    uint32_t sleep_secs =",
         "  // The high-rate diagnostic sampler requires MCU uptime.\n  can_power_save=false;\n  if (can_power_save) {\n    uint32_t sleep_secs =",
         "disable long sleep")
     main_file.write_text(text)
-    for file in ("PowerMonitor.h","PowerMonitor.cpp","EnergyIntegrator.h"):
+    mesh_file=main_file.parent/"MyMesh.cpp"
+    mesh_text=mesh_file.read_text()
+    mesh_text=replace_one(mesh_text,'#include "MyMesh.h"',
+        '#include "MyMesh.h"\n#include "PowerMonitor.h"\nextern pm::PowerMonitor power_monitor;',
+        "telemetry includes")
+    mesh_text=replace_one(mesh_text,'    sensors.querySensors(perm_mask, telemetry);',
+        '    power_monitor.appendTelemetry(telemetry,perm_mask);\n    sensors.querySensors(perm_mask, telemetry);',
+        "native telemetry response")
+    anchor='  if (region_load_active && sender && !sender->isAdmin() && !sender->isRegionMgr()) {'
+    hook='''  if (strncmp(command,"pm",2)==0 && (!command[2] || command[2]==' ')) {
+    if (!usb_origin && (!sender || !sender->isAdmin())) {
+      strcpy(reply,"Err - admin required");return;
+    }
+    if (!usb_origin && strcmp(command,"pm reset YES")==0) {
+      strcpy(reply,"Err - reset is local USB only");return;
+    }
+    if (power_monitor.handleCommand(command,reply,156))return;
+  }
+'''
+    mesh_text=replace_one(mesh_text,anchor,hook+anchor,"on-demand admin diagnostics")
+    mesh_file.write_text(mesh_text)
+    for file in ("PowerMonitor.h","PowerMonitor.cpp","EnergyIntegrator.h","SolarHistory.h","PowerTelemetry.h"):
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
     # Generated for every build. Both source revision and numeric version are
     # accessible via local MeshCore USB CLI: pm version.
@@ -86,7 +94,7 @@ void loop() {
         "  -Ofast\n"
         "build_flags = ${env:"+base+".build_flags}\n"
         "  -DPM_SAMPLE_MS=20\n"
-        "  -DPM_REPORT_MS=900000\n"
+        "  -DPM_CHECKPOINT_MS=900000\n"
         "  -DPM_TEMPERATURE_MS=60000\n"
         "  -DPM_SOLAR_SHUNT_OHMS=0.100f\n"
         "  -DPM_LOAD_SHUNT_OHMS=0.100f\n"

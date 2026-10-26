@@ -17,7 +17,7 @@ UP="$ROOT/upstream"
 if [[ ! -d "$UP/.git" ]];then git clone "$URL" "$UP";fi
 git -C "$UP" fetch origin "$REV"
 git -C "$UP" checkout --detach "$REV"
-git -C "$UP" restore examples/simple_repeater/main.cpp variants/rak4631/platformio.ini
+git -C "$UP" restore examples/simple_repeater/main.cpp examples/simple_repeater/MyMesh.cpp variants/rak4631/platformio.ini
 python3 "$ROOT/scripts/inject.py" "$UP" --storage "$STORAGE" --version "$FULL" --source-sha "$SHA"
 (cd "$UP" && pio run -e RAK_4631_repeater_power_monitor)
 # Convert the final HEX, after upstream's EndF/layout post-action. A BIN

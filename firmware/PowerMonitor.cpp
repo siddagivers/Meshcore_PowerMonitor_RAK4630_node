@@ -1,10 +1,14 @@
 #include "PowerMonitor.h"
+#include "PowerTelemetry.h"
 #include <Mesh.h>
 #include <Adafruit_LittleFS.h>
 #include <InternalFileSystem.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <memory>
+#include <new>
+#include <helpers/SensorManager.h>
 using namespace Adafruit_LittleFS_Namespace;
 
 namespace pm {
@@ -18,6 +22,7 @@ struct Snapshot {
   uint16_t version, spare;
   uint32_t sequence, utc_day;
   double total_solar, total_load, day_solar, day_load;
+  SolarHistory::State solar_history;
   uint32_t crc;
 };
 uint32_t crc32fnv(const uint8_t* p, size_t n) {
@@ -59,10 +64,11 @@ void PowerMonitor::begin(bool allow_checkpoint) {
   mcp_found_=probe(MCP);
   if(mcp_found_) readMcp();
   const uint32_t now=millis();
-  next_sample_=next_temperature_=next_report_=next_checkpoint_=now;
+  next_sample_=next_temperature_=next_checkpoint_=now;
   if(checkpoint_enabled_)restore();
 }
-void PowerMonitor::sample(Channel& channel) {
+void PowerMonitor::sample(Channel& channel,uint32_t utc) {
+  channel.valid=false;
   if(!channel.detected){channel.counter.gap(millis());return;}
   uint16_t raw_shunt=0,raw_bus=0;
   const bool ok=read16(channel.address,INA_SHUNT,raw_shunt)
@@ -77,10 +83,15 @@ void PowerMonitor::sample(Channel& channel) {
   channel.volts=bus_v+shunt_v;
   channel.milliamps=1000.0f*shunt_v/channel.shunt_ohms*channel.sign;
   channel.milliwatts=channel.volts*channel.milliamps;
+  channel.valid=true;
   const double old=channel.counter.total_mwh;
+  const uint64_t old_covered=channel.counter.covered_ms;
   channel.counter.add(now,channel.milliwatts);
   const double delta=channel.counter.total_mwh-old;
-  if(&channel==&solar_)today_solar_+=delta;else today_load_+=delta;
+  if(&channel==&solar_) {
+    today_solar_+=delta;
+    history_.add(utc,delta,(uint32_t)(channel.counter.covered_ms-old_covered));
+  } else today_load_+=delta;
 }
 void PowerMonitor::readMcp() {
   uint16_t raw=0;
@@ -89,56 +100,68 @@ void PowerMonitor::readMcp() {
   if(raw&0x1000)t-=256.0f;
   mcp_temperature_=t;
 }
-void PowerMonitor::summary(char* out,size_t cap,bool compact) const {
-  if(compact)
-    snprintf(out,cap,"PM15 S=%.3fmWh L=%.3fmWh D=%.2f/%.2f T=%.1fC V=%.2f/%.2f C=%u/%u%%",
-      solar_.counter.window_mwh,load_.counter.window_mwh,
-      today_solar_,today_load_,mcp_temperature_,solar_.volts,load_.volts,
-      solar_.counter.coverage(),load_.counter.coverage());
-  else
-    snprintf(out,cap,"S=%.4f/%.4fmWh L=%.4f/%.4fmWh V=%.2f/%.2f I=%.1f/%.1fmA",
+void PowerMonitor::summary(char* out,size_t cap) const {
+  snprintf(out,cap,"S=%.4f/%.4fmWh L=%.4f/%.4fmWh V=%.2f/%.2f I=%.1f/%.1fmA",
       solar_.counter.window_mwh,solar_.counter.total_mwh,
       load_.counter.window_mwh,load_.counter.total_mwh,
       solar_.volts,load_.volts,solar_.milliamps,load_.milliamps);
 }
-void PowerMonitor::sendReport(uint32_t now,Publisher p) {
-  char buf[150];summary(buf,sizeof(buf),true);
-  if(p&&p(buf)) {
-    next_report_=now;
-    solar_.counter.resetWindow();load_.counter.resetWindow();
+void PowerMonitor::appendTelemetry(CayenneLPP& lpp,uint8_t permissions) const {
+  if(!(permissions&TELEM_PERM_ENVIRONMENT))return;
+  // Emit the requested solar histories first, within the existing bounded
+  // telemetry buffer. Ordinary sensors append afterwards using their checks.
+  if(utc_>=1700000000UL) {
+    appendSolarReading(lpp,110,history_.rolling(utc_,900));
+    appendSolarReading(lpp,111,history_.rolling(utc_,3600));
+    appendSolarReading(lpp,112,history_.today(utc_));
+    appendSolarReading(lpp,113,history_.previous(utc_));
   }
-  last_retry_=now;
+  const Channel* channels[]={&solar_,&load_};
+  for(unsigned i=0;i<2;i++) {
+    const auto& c=*channels[i];const uint8_t id=100+i;
+    if(c.valid) {
+      if(c.volts>=0&&c.volts<=655.35f)lpp.addVoltage(id,c.volts);
+      if(c.milliamps>=0&&c.milliamps<=65535)lpp.addCurrent(id,c.milliamps/1000);
+      const float watts=c.milliwatts/1000;
+      if(isfinite(watts)&&watts>=-327.67f&&watts<=327.67f)lpp.addAnalogInput(id,watts);
+      if(watts>=0&&watts<=65535)lpp.addPower(id,watts);
+    }
+    if(c.counter.total_mwh>=0 && c.counter.total_mwh<4294967000000.0)
+      lpp.addEnergy(id,(float)(c.counter.total_mwh/1000000.0));
+  }
+  if(isfinite(mcp_temperature_))lpp.addTemperature(102,mcp_temperature_);
+  lpp.addDigitalInput(114,checkpoint_ok_?1:0);
 }
-void PowerMonitor::poll(uint32_t now,uint32_t utc,Publisher publisher) {
+void PowerMonitor::poll(uint32_t now,uint32_t utc) {
+  utc_=utc;
+  const uint32_t old_day=history_.state.day;
+  history_.advance(utc);
+  if(utc>=1700000000UL) {
+    const uint32_t day=utc/86400UL;
+    if(utc_day_ && day!=utc_day_){today_solar_=0;today_load_=0;}
+    utc_day_=day;
+  }
   if((uint32_t)(now-next_sample_)>=PM_SAMPLE_MS) {
     next_sample_=now;
-    sample(solar_);sample(load_);
+    sample(solar_,utc);sample(load_,utc);
   }
   if((uint32_t)(now-next_temperature_)>=PM_TEMPERATURE_MS) {
     next_temperature_=now;if(mcp_found_)readMcp();
   }
-  if(utc>=1700000000UL) {
-    const uint32_t day=utc/86400UL;
-    if(!utc_day_) utc_day_=day;
-    else if(day>utc_day_) {
-      utc_day_=day;today_solar_=0;today_load_=0;
-      if(checkpoint_enabled_)save();
-    }
-  }
-  if(checkpoint_enabled_&&(uint32_t)(now-next_checkpoint_)>=PM_REPORT_MS) {
+  if(checkpoint_enabled_&&((uint32_t)(now-next_checkpoint_)>=PM_CHECKPOINT_MS
+       || (old_day && old_day!=history_.state.day))) {
     next_checkpoint_=now;save();
   }
-  if(auto_report_&&(uint32_t)(now-next_report_)>=PM_REPORT_MS
-      &&(uint32_t)(now-last_retry_)>=30000UL) sendReport(now,publisher);
 }
 void PowerMonitor::clear() {
   solar_.counter=Integrator{};load_.counter=Integrator{};
-  today_solar_=today_load_=0;next_report_=millis();
+  today_solar_=today_load_=0;history_.state=SolarHistory::State{};
+  history_.advance(utc_);
   if(checkpoint_enabled_)save();
 }
 bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
   if(strncmp(c,"pm",2)!=0 || (c[2]&&c[2]!=' '))return false;
-  if(!strcmp(c,"pm")||!strcmp(c,"pm status"))summary(out,cap,false);
+  if(!strcmp(c,"pm")||!strcmp(c,"pm status"))summary(out,cap);
   else if(!strcmp(c,"pm sensors"))
     snprintf(out,cap,"solar40:%s load41:%s mcp18:%s T=%.2fC errs=%lu/%lu cov=%u/%u%%",
       solar_.detected?"OK":"MISSING",load_.detected?"OK":"MISSING",
@@ -148,45 +171,61 @@ bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
   else if(!strcmp(c,"pm day"))
     snprintf(out,cap,"UTCday=%lu solar=%.3fmWh load=%.3fmWh restore=%lu",
       (unsigned long)utc_day_,today_solar_,today_load_,(unsigned long)restores_);
-  else if(!strcmp(c,"pm report"))summary(out,cap,true);
-  else if(!strcmp(c,"pm report on")){auto_report_=true;snprintf(out,cap,"OK reporting on");}
-  else if(!strcmp(c,"pm report off")){auto_report_=false;snprintf(out,cap,"OK reporting off");}
+  else if(!strcmp(c,"pm solar 15m")||!strcmp(c,"pm solar 1h")
+       ||!strcmp(c,"pm solar today")||!strcmp(c,"pm solar yesterday")) {
+    SolarHistory::Reading reading{};
+    if(!strcmp(c,"pm solar 15m"))reading=history_.rolling(utc_,900);
+    else if(!strcmp(c,"pm solar 1h"))reading=history_.rolling(utc_,3600);
+    else if(!strcmp(c,"pm solar today"))reading=history_.today(utc_);
+    else reading=history_.previous(utc_);
+    snprintf(out,cap,"%s %.3fmWh avg=%.3fW cov=%u%% UTC checkpoint=%s",
+      c+3,reading.mwh,reading.watts(),reading.coverage(),checkpoint_ok_?"OK":"unavailable");
+  }
   else if(!strcmp(c,"pm reset YES")){clear();snprintf(out,cap,"OK energy counters cleared");}
   else if(!strcmp(c,"pm version"))
     snprintf(out,cap,"power-monitor %s git %s",PM_VERSION,PM_SOURCE_SHA);
   else if(!strcmp(c,"pm info"))
     snprintf(out,cap,"v=%s 20ms solar=0x40 load=0x41 MCP=0x18 R=%.3f/%.3f",
       PM_VERSION,(double)solar_.shunt_ohms,(double)load_.shunt_ohms);
-  else snprintf(out,cap,"pm status|sensors|day|report|version|info|report on|report off|reset YES");
+  else snprintf(out,cap,"pm status|sensors|day|version|info|solar 15m|solar 1h|solar today|solar yesterday|reset YES");
   return true;
 }
 bool PowerMonitor::restore() {
-  Snapshot best{};bool valid=false;
+  std::unique_ptr<Snapshot> storage(new(std::nothrow) Snapshot{});
+  if(!storage)return false;
+  bool valid=false;
   for(unsigned i=0;i<2;i++) {
     File f=InternalFS.open(slotName(i),FILE_O_READ);
     if(!f)continue;
-    Snapshot s{};
+    Snapshot& s=*storage;
     const int n=f.read((uint8_t*)&s,sizeof(s));f.close();
-    if(n!=(int)sizeof(s)||s.magic!=SNAP_MAGIC||s.version!=2)continue;
+    if(n!=(int)sizeof(s)||s.magic!=SNAP_MAGIC||s.version!=3)continue;
     if(crc32fnv((const uint8_t*)&s,offsetof(Snapshot,crc))!=s.crc)continue;
-    if(!valid||(int32_t)(s.sequence-best.sequence)>0){best=s;valid=true;}
+    if(!valid||(int32_t)(s.sequence-sequence_)>0) {
+      solar_.counter.total_mwh=s.total_solar;load_.counter.total_mwh=s.total_load;
+      today_solar_=s.day_solar;today_load_=s.day_load;
+      history_.state=s.solar_history;
+      utc_day_=s.utc_day;sequence_=s.sequence;valid=true;
+    }
   }
   if(!valid)return false;
-  solar_.counter.total_mwh=best.total_solar;
-  load_.counter.total_mwh=best.total_load;
-  today_solar_=best.day_solar;today_load_=best.day_load;
-  utc_day_=best.utc_day;sequence_=best.sequence;restores_++;return true;
+  restores_++;checkpoint_ok_=true;return true;
 }
 bool PowerMonitor::save() {
   if(!checkpoint_enabled_)return false;
-  Snapshot s{};
-  s.magic=SNAP_MAGIC;s.version=2;s.sequence=++sequence_;s.utc_day=utc_day_;
+  checkpoint_ok_=false;
+  std::unique_ptr<Snapshot> storage(new(std::nothrow) Snapshot{});
+  if(!storage)return false;
+  Snapshot& s=*storage;
+  s.magic=SNAP_MAGIC;s.version=3;s.sequence=sequence_+1;s.utc_day=utc_day_;
   s.total_solar=solar_.counter.total_mwh;s.total_load=load_.counter.total_mwh;
   s.day_solar=today_solar_;s.day_load=today_load_;
+  s.solar_history=history_.state;
   s.crc=crc32fnv((const uint8_t*)&s,offsetof(Snapshot,crc));
   File f=InternalFS.open(slotName(s.sequence&1U),FILE_O_WRITE);
   if(!f)return false;
   const size_t bytes=f.write((const uint8_t*)&s,sizeof(s));f.close();
-  return bytes==sizeof(s);
+  if(bytes!=sizeof(s))return false;
+  sequence_=s.sequence;checkpoint_ok_=true;return true;
 }
 }

@@ -6,9 +6,10 @@
 
 ## Version, status and supported hardware
 
-* Firmware version: **0.1.0 development** (see [VERSION](VERSION)).
-* Successful CI build versions: `0.1.0-dev.N`, where `N` is the GitHub Actions run number.
-* Successful CI jobs publish a GitHub **pre-release** with a `v0.1.0-dev.N` tag, firmware files, SHA-256 hashes, and build metadata.
+* Firmware version: **0.2.0 development** (see [VERSION](VERSION)).
+* Successful CI build versions: `0.2.0-dev.N`, where `N` is the GitHub Actions run number.
+* Successful CI jobs publish a GitHub **pre-release** with a `v0.2.0-dev.N` tag, firmware files, SHA-256 hashes, and build metadata.
+* **Use 0.2.0 or newer for on-demand telemetry. Historical 0.1.0 binaries broadcast periodic flood reports and do not implement this behavior.**
 * The firmware contains the same version and source commit; read over USB with `pm version`.
 * **NOT yet bench-validated on a physical RAK4631.** Do not OTA-flash your only remote repeater with a development image.
 * This is an **nRF52840 / RAK4631 repeater build**, not the RAK3401 + RAK13302 1 W hardware.
@@ -56,46 +57,53 @@ The sampler polls both INA219 devices approximately every 20 ms while preserving
 * Energy [mWh] = trapezoidal integral of power [mW] over **actual elapsed milliseconds** / 3,600,000.
 * Samples more than 200 ms apart are **not filled in with guesses**. The report includes measured coverage percentage.
 * Keep sign: negative readings indicate reversed or genuinely bidirectional flow.
-* Track 15-minute windows, UTC-day counters and all-time counters separately.
+* Store rolling solar 15-minute / 1-hour histories, current UTC-day totals, the previous completed UTC day, and all-time counters separately.
 
 **Important precision limits:** 20 ms is a *target polling interval*, not a guarantee. Radio servicing, other sensor drivers, I2C delays and time spent transmitting reports can delay the next sample. INA219's own ADC conversions further limit resolution, and brief TX peaks could still be missed or averaged. Totals should be calibrated against a reference power meter and must not be called exact to the last Wh.
 
 Continuous polling keeps the nRF52840 awake, **raising the idle consumption** compared with sleeping MeshCore firmware. This is a measurement/testing build; afterwards you may choose a slower schedule.
 
-## Reporting and saved data
+## On-demand native telemetry and saved data
 
-One **MeshCore Repeaters-channel flood text** is queued every **15 minutes**. Example:
+**The power monitor sends no periodic text floods, broadcasts or unsolicited telemetry.** Connect/login to the repeater through your MeshCore client and request or refresh its normal sensor telemetry. Power statistics are appended to the existing authenticated telemetry response; the request's environment-permission mask and guest restrictions remain in effect. Ordinary MeshCore adverts, routing and other upstream features retain their existing behavior. Any over-radio request/reply still uses the normal mesh transport and may need route discovery.
 
-```text
-PM15 S=38.500mWh L=16.230mWh D=97.51/65.38 T=12.2C V=5.35/4.08 C=99/98%
-```
+Solar statistics include energy harvested and **average power over measured time** for the rolling last 15 minutes, rolling last hour, today since **00:00 UTC**, and yesterday's completed **00:00:00–23:59:59 UTC** day. Average power does not treat unmeasured time as zero; inspect the coverage percentage alongside it. Day statistics and wall-clock rolling histories require valid UTC time.
 
-* `S` solar energy during the report interval (mWh).
-* `L` measured load energy during the report interval (mWh), not automatically battery current.
-* `D` today's solar/load mWh, once the clock has valid UTC; before then this is a running counter.
-* `T` MCP9808 external temperature (°C).
-* `V` solar/load supply voltages (V).
-* `C` measured-time coverage of solar/load windows (%).
+| Telemetry channel | Meaning | Fields / units |
+| --- | --- | --- |
+| 100 | Solar INA219 instantaneous readings and cumulative energy | Voltage V, current A, analog-input signed W, native power W, native energy kWh |
+| 101 | Load INA219 instantaneous readings and cumulative energy | Same fields as solar |
+| 102 | MCP9808 outside temperature | Temperature °C |
+| 110 | Solar rolling last 15 minutes | Generic sensor **mWh**, analog input **average W**, native energy kWh, percentage coverage |
+| 111 | Solar rolling last 1 hour | Same fields |
+| 112 | Solar today since UTC midnight | Same fields |
+| 113 | Solar yesterday, completed UTC day | Same fields; unavailable days carry 0% coverage without invented energy |
+| 114 | Snapshot checkpoint status | Digital input: 1 = saved/restored successfully; 0 = not yet saved or last save failed |
 
-This is best-effort MeshCore flooding; a queued packet is **not** proof your Raspberry Pi received it. If queueing fails, firmware retries after 30 seconds without discarding the interval accumulation. Native MeshCore environmental telemetry remains available separately.
+The standard CayenneLPP energy field resolves only **1 Wh** and its power field only **1 W**. To retain useful solar-node precision, the same response includes generic energy in **mWh** and signed analog power in **W with 0.01-W wire resolution**. Client support determines field names, rounding, grouping and whether a refresh is automatic; firmware cannot add a custom named screen to an unchanged client. Clients may show generic channel numbers instead of the descriptions above. The remote admin `pm solar ...` commands below provide precise text readings on demand as well.
 
-Cumulative energy, day totals and a sequence number are saved every 15 minutes to **two alternating checksummed InternalFS snapshots**, independent of the external RAK15001. A sudden power cut can lose energy recorded after the last checkpoint. A device clock reset cannot recover accurate calendar-day boundaries until time synchronizes.
+Unsigned LPP current/power/energy fields are omitted for negative readings rather than wrapping them into huge positive values. Signed analog power and the read-only diagnostics retain negative values. Values outside a type's range are omitted. The bounded telemetry packet prioritizes these power fields before ordinary external sensors; a fully populated sensor set may not fit in one response, and later sensor fields can be omitted by the existing encoder's size checks.
 
-## USB serial commands
+Energy is still integrated from fast samples, then stored in **10-second history buckets**. Rolling queries omit the partially overlapping oldest bucket, so their boundary resolution is up to 10 seconds; that missing time reduces coverage. Coverage for rolling windows includes startup, outages and sampling gaps. UTC-day coverage compares actual measured time with elapsed time since midnight, or 24 hours for yesterday. Solar data before clock synchronization is not assigned to a calendar day.
 
-Connect a **local** serial terminal at 115200 baud and use carriage-return line endings. These commands are implemented only on the local USB console; ordinary MeshCore remote-admin text commands are not modified.
+Cumulative counters, solar history buckets, today/yesterday solar totals, coverage and a sequence number are saved every 15 minutes and at UTC-day rollover to **two alternating checksummed InternalFS snapshots**. The snapshots use roughly 9 KiB together, share the existing 28-KiB InternalFS with normal repeater data, and never use the OTA-owned RAK15001. Insufficient filesystem space or a failed write is reported by checkpoint status; no partition boundary is expanded. Heap-backed snapshot buffers avoid overflowing the normal repeater loop stack. Sudden power loss can discard samples since the last checkpoint. Restored buckets keep their UTC timestamps, so downtime is not counted as measured time. Version-3 snapshots include this history; old version-2 snapshots are not imported, so upgrading from 0.1.0 starts fresh counters.
+
+## USB and authenticated remote commands
+
+Use a local USB serial terminal at 115200 baud with carriage-return endings, or the repeater's authenticated **admin** command console over MeshCore. Reading commands respond only when requested. Reset remains **local USB only**.
 
 | Command | Result |
 | --- | --- |
 | `pm version` | Version and embedded source SHA |
 | `pm sensors` | Sensors at 0x40, 0x41, 0x18, temperature, error counts, coverage |
-| `pm status` | Window/cumulative mWh, voltage and current |
+| `pm status` | Since-boot/cumulative mWh, voltage and current |
 | `pm day` | UTC-day solar/load totals and snapshot recovery count |
-| `pm report` | Preview next mesh report without transmitting |
-| `pm report off` | Disable 15-minute flood until reboot or re-enable |
-| `pm report on` | Resume periodic floods |
+| `pm solar 15m` | Rolling 15-minute solar mWh, measured-time average W and coverage |
+| `pm solar 1h` | Rolling 1-hour solar statistics |
+| `pm solar today` | Solar statistics since 00:00 UTC |
+| `pm solar yesterday` | Previous completed UTC-day solar statistics |
 | `pm info` | Sampler interval, shunt values and firmware version |
-| `pm reset YES` | Reset energy totals and checkpoint zeroes |
+| `pm reset YES` | Local USB only: reset energy totals/history and checkpoint zeroes |
 
 ## Compile on Raspberry Pi / Debian
 
@@ -115,7 +123,7 @@ bash scripts/build_on_pi.sh rak15001
 
 Source is pinned to upstream [Mesh-America MeshCore](https://github.com/Mesh-America/mesh-america-quake-repeater) revision **`c908bb09e68ca81e1d19198776e0f2e5b7e48653`**. The injection script checks exact integration anchors, patches the repeater's main event loop and adds a separate PlatformIO environment called `RAK_4631_repeater_power_monitor`. **It never flashes connected hardware.**
 
-Outputs are written to `output/` with names such as `RAK4631_rak15001_PM_v0.1.0-local.20261026210000.hex`, plus matching `.uf2` and `.bin` files. These are converted from the final HEX **after** the upstream EndF/layout trailer is appended. Packaging rejects HEX data outside the application interval `0x26000..0xECFFF`. The raw BIN starts at **0x26000**, contains application data only, and is not a combined bootloader/SoftDevice image. UF2 embeds destination addresses and uses the nRF52840 family ID `0xADA52840`. Each build also produces `.sha256` and JSON metadata with the exact build's source commit, upstream revision, UTC date and output-file hashes. **Do not rename a BIN to UF2.**
+Outputs are written to `output/` with names such as `RAK4631_rak15001_PM_v0.2.0-local.20261026210000.hex`, plus matching `.uf2` and `.bin` files. These are converted from the final HEX **after** the upstream EndF/layout trailer is appended. Packaging rejects HEX data outside the application interval `0x26000..0xECFFF`. The raw BIN starts at **0x26000**, contains application data only, and is not a combined bootloader/SoftDevice image. UF2 embeds destination addresses and uses the nRF52840 family ID `0xADA52840`. Each build also produces `.sha256` and JSON metadata with the exact build's source commit, upstream revision, UTC date and output-file hashes. **Do not rename a BIN to UF2.**
 
 Alternative build targets (different **hardware and bootloader**):
 * `bash scripts/build_on_pi.sh w25q16` — RAK4631 with separately wired Winbond W25Q16 flash, matching dedicated application and bootloader.
@@ -127,9 +135,9 @@ The 1 W RAK3401 + RAK13302 project is separate: [Lora_OT_Lora_UPDATE_1wRak](http
 
 The workflow [`.github/workflows/firmware.yml`](.github/workflows/firmware.yml) runs the C++ host integration test and builds the RAK15001 configuration from scratch on each push to `main`, or via **Actions > Versioned RAK4631 firmware > Run workflow**.
 
-* **Development build:** repository `VERSION` = `0.1.0`; Actions run number = `N`; binary reports `0.1.0-dev.N`.
+* **Development build:** repository `VERSION` = `0.2.0`; Actions run number = `N`; binary reports `0.2.0-dev.N`.
 * **CI artifacts:** every *successful* job provides a downloadable versioned archive under its Actions run.
-* **GitHub Releases:** once the compiler and tests pass, the workflow publishes `v0.1.0-dev.N` as a **pre-release** with actual compiled files plus hashes. A failed build **must not** produce a flashable release.
+* **GitHub Releases:** once the compiler and tests pass, the workflow publishes `v0.2.0-dev.N` as a **pre-release** with actual compiled files plus hashes. A failed build **must not** produce a flashable release.
 * **Traceability:** `pm version` and the adjacent build-manifest JSON identify the exact source commit.
 
 Version policy: increment `VERSION` for intentional feature/compatibility changes; CI run numbers disambiguate rebuilds of the same source revision. Pre-release means **not hardware-qualified**. Only upgrade to a stable `v1.0.0` after bench tests, 1-hour cumulative measurement comparison, unexpected-reset tests, and a successful recovery drill.
@@ -138,7 +146,7 @@ Version policy: increment `VERSION` for intentional feature/compatibility change
 
 ### Compiler verification, 26 October 2026
 
-The RAK15001 slot-C target was compiled on a Raspberry Pi 5 running 64-bit Linux, using Python 3.11, PlatformIO 6.2.0, Nordic nRF52 platform 11.0.0 and GCC ARM 14.2.1. Host integrator tests passed (constant load, simulated TX burst, missing samples, signed power and timer wrap). The full build passed the upstream runtime-RAM and compiled Bluetooth DFU-handoff checks; it used approximately 549 kB of application flash and 96 kB of static RAM. HEX, BIN and UF2 packaging completed with the `RAK4631_RAK15001_C` EndF identity and unchanged application/bootloader boundaries.
+The RAK15001 slot-C target was compiled on a Raspberry Pi 5 running 64-bit Linux, using Python 3.11, PlatformIO 6.2.0, Nordic nRF52 platform 11.0.0 and GCC ARM 14.2.1. Host integrator and history tests passed (constant load, simulated TX burst, missing samples, signed power, timer wrap, rolling histories, UTC day rollover, stored-state recovery and telemetry units). The full build passed the upstream runtime-RAM and compiled Bluetooth DFU-handoff checks; it used approximately 551 kB of application flash and 100 kB of static RAM. HEX, BIN and UF2 packaging completed with the `RAK4631_RAK15001_C` EndF identity and unchanged application/bootloader boundaries.
 
 This resolves the run-3 flash overflow and the Pi's missing IntelHex packaging dependency. Versioned Pi-built files are kept in `releases/`; each manifest identifies the source commit used to build them, which can precede the commit adding the artifacts. CI builds remain available through Actions and pre-releases. **Compiler and host-test success do not verify radio behavior, sensor accuracy, checkpoint recovery, or OTA operation on physical hardware. No flash or OTA apply was performed.** Only the `rak15001` target was compiled in this verification; the alternative storage targets remain unverified.
 
@@ -148,7 +156,7 @@ This resolves the run-3 flash overflow and the Pi's missing IntelHex packaging d
 2. Verify normal MeshCore radio operation on the bench before using experimental power-monitor images.
 3. Use `pm version` and `pm sensors` over USB to confirm all three I2C devices and the desired firmware SHA.
 4. Put a known load in series with INA219 `0x41`; measure bus voltage and peak TX current with a separate reference meter.
-5. Observe four consecutive 15-minute packets and compare cumulative mWh/coverage against a calibrated power meter. Check wake/idle power penalty.
+5. Request telemetry after 15 minutes and 1 hour, and across UTC midnight; compare rolling/day mWh and coverage with a calibrated power meter. Check wake/idle power penalty.
 6. Check `ota self`, `ota status`, `ota qspi` on a matching OTA-enabled repeater. Expect RAK15001 JEDEC `C84015`, 2048 KiB, and a capable bootloader.
 7. Test watchdog/reset/checkpoint behavior, reboots and power interruptions. Only then plan a remote deployment.
 
@@ -163,7 +171,7 @@ This resolves the run-3 flash overflow and the Pi's missing IntelHex packaging d
 * 0 or incorrect energy: check series shunt wiring, direction and resistor value; do not confuse battery current with repeater consumption.
 * `QSPI store:ERR`: recheck RAK15001 slot C, flash module identity, and exact bootloader pairing.
 * Build failure: open GitHub Actions logs; do not flash an unverified artifact.
-* `pm sensors` prints only on USB: remote MeshCore CLI integration is not implemented in this development version.
+* Missing power telemetry: login with environment-sensor access, explicitly refresh telemetry, and verify UTC time. Use the authenticated admin console with `pm solar 15m` for precise diagnostic output.
 
 **Safety:** Solar charging is an electrical power-management function, not a regulated laboratory supply. Never insert current monitors between Li-ion battery terminals without appropriate insulation, current limits and short-circuit protection.
 

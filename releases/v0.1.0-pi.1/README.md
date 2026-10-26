@@ -1,5 +1,8 @@
 # RAK4631 PowerMonitor 0.1.0-pi.1
 
+**Historical build: this version broadcasts 15-minute power reports. Use
+0.2.0 or newer for native on-demand telemetry and rolling UTC solar history.**
+
 Built on a Raspberry Pi 5 (aarch64 Linux) from clean tracked source commit
 `47a6413783894173cc5e4ab9b0a6f51d6ff79de5`, with pinned MeshCore upstream
 `c908bb09e68ca81e1d19198776e0f2e5b7e48653`.
