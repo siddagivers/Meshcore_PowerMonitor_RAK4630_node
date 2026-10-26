@@ -1,6 +1,7 @@
 #include "PowerMonitor.h"
 #include <Mesh.h>
 #include <Adafruit_LittleFS.h>
+#include <InternalFileSystem.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
