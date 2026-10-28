@@ -1,0 +1,36 @@
+{
+  "version": "0.3.1-pi.1",
+  "source_commit": "36aba0a74b178668bc310069d19ec717c26b1c25",
+  "upstream": "81dbae592ffad40b4212bc0b37e82b38da08f4bc",
+  "upstream_url": "https://github.com/meshcore-dev/MeshCore",
+  "upstream_version": "v1.18.0",
+  "target": "RAK_4631_repeater_power_monitor",
+  "profile": "official_no_lora_ota",
+  "lora_ota": false,
+  "application_start": "0x26000",
+  "application_limit": "0xD4000",
+  "dfu": {
+    "format": "Nordic/Adafruit legacy DFU 0.5",
+    "application_only": true,
+    "softdevice_req": "0x00B6"
+  },
+  "built_utc": "2026-10-28T20:55:17.065360+00:00",
+  "firmware": {
+    "RAK4631_official_no_lora_ota_PM_v0.3.1-pi.1.hex": {
+      "bytes": 1031009,
+      "sha256": "f53455a709d01818161c23af0abdf2034dfbbde81b2f9e35918f7d708de213fa"
+    },
+    "RAK4631_official_no_lora_ota_PM_v0.3.1-pi.1.zip": {
+      "bytes": 367331,
+      "sha256": "5c8bec8cfa7915e6ff81a003eb5f25953320c6cc4a1cbc458e0449f363a1df94"
+    },
+    "RAK4631_official_no_lora_ota_PM_v0.3.1-pi.1.bin": {
+      "bytes": 366528,
+      "sha256": "3e83c8809468da7b2b3f42f6e47e36b54904ed470437d5cead3405ab6d78fffc"
+    },
+    "RAK4631_official_no_lora_ota_PM_v0.3.1-pi.1.uf2": {
+      "bytes": 733184,
+      "sha256": "e04cefa8d6b7faa706ce909274ff7a33b65078fca231a42f122ec69ae15fcc3a"
+    }
+  }
+}

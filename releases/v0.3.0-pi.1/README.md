@@ -1,5 +1,9 @@
 # RAK4631 PowerMonitor 0.3.0-pi.1 — official MeshCore base
 
+**Superseded by 0.3.1: this build incorrectly rejects the INA219's normal
+conversion-ready bit. Use 0.3.1 or newer for corrected INA readings and
+MCP9808 identity validation.**
+
 **Official meshcore-dev/MeshCore v1.18.0-based repeater, with power monitoring,
 native sensors and on-demand telemetry. No LoRa OTA updates.**
 

@@ -34,12 +34,34 @@ if image.minaddr()!=0x26000 or image.maxaddr()>=0xD4000:
 image.tobinfile(str(build/"firmware.bin"))
 PY
 python3 "$UP/bin/uf2conv/uf2conv.py" -f 0xADA52840 -c "$BUILD/firmware.hex" -o "$BUILD/firmware.uf2"
+# Keep PlatformIO's real Nordic/Adafruit application DFU package, not a ZIP
+# of arbitrary HEX/UF2 files. Check the package against the final application.
+python3 - "$BUILD" <<'PY'
+from pathlib import Path
+import sys,zipfile,json,struct
+b=Path(sys.argv[1])
+with zipfile.ZipFile(b/"firmware.zip") as z:
+ m=json.loads(z.read("manifest.json"))["manifest"]
+ if set(m)!={"application","dfu_version"} or m["dfu_version"]!=0.5:
+  raise SystemExit("Expected application-only Nordic/Adafruit DFU 0.5 package")
+ app=m["application"];data=z.read(app["bin_file"]);init=z.read(app["dat_file"])
+ if data!=(b/"firmware.bin").read_bytes():raise SystemExit("DFU binary does not match final HEX/BIN")
+ crc=0xFFFF
+ for byte in data:
+  crc^=byte<<8
+  for _ in range(8):crc=((crc<<1)^0x1021)&0xFFFF if crc&0x8000 else (crc<<1)&0xFFFF
+ if len(init)!=14 or struct.unpack("<7H",init)[4:6]!=(1,0x00B6):
+  raise SystemExit("DFU init packet must require S140 v6.1.1 (0x00B6)")
+ if struct.unpack("<H",init[-2:])[0]!=crc or app["init_packet_data"]["firmware_crc16"]!=crc:
+  raise SystemExit("DFU CRC16 validation failed")
+ print("PASS: application-only DFU ZIP, matching BIN, CRC16, S140 0x00B6")
+PY
 OUT="$ROOT/output"
 mkdir -p "$OUT"
 PREFIX="RAK4631_official_no_lora_ota_PM_v${FULL}"
 FOUND=0
 FILES=()
-for extension in uf2 hex bin;do
+for extension in uf2 hex bin zip;do
   src="$UP/.pio/build/RAK_4631_repeater_power_monitor/firmware.$extension"
   if [[ -f "$src" ]];then
     cp "$src" "$OUT/${PREFIX}.$extension"
@@ -57,7 +79,7 @@ o=Path(os.environ["PM_BUILD_ROOT"])/"output"
 prefix="RAK4631_official_no_lora_ota_PM_v"+os.environ["PM_FULL_VERSION"]
 items={}
 for f in o.glob(prefix+".*"):
- if f.suffix in (".hex",".uf2",".bin"):
+ if f.suffix in (".hex",".uf2",".bin",".zip"):
   items[f.name]={"bytes":f.stat().st_size,"sha256":hashlib.sha256(f.read_bytes()).hexdigest()}
 metadata={
  "version":os.environ["PM_FULL_VERSION"], "source_commit":os.environ["PM_SOURCE_SHA"],
@@ -67,6 +89,7 @@ metadata={
  "target":"RAK_4631_repeater_power_monitor",
  "profile":"official_no_lora_ota", "lora_ota":False,
  "application_start":"0x26000", "application_limit":"0xD4000",
+ "dfu":{"format":"Nordic/Adafruit legacy DFU 0.5","application_only":True,"softdevice_req":"0x00B6"},
  "built_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
  "firmware":items
 }
