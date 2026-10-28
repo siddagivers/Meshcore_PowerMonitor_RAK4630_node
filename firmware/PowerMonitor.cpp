@@ -1,5 +1,6 @@
 #include "PowerMonitor.h"
 #include "PowerTelemetry.h"
+#include "SensorDecoders.h"
 #include <Mesh.h>
 #include <Adafruit_LittleFS.h>
 #include <InternalFileSystem.h>
@@ -11,6 +12,9 @@
 #include <helpers/SensorManager.h>
 #if ENV_INCLUDE_INA260
 #error "PowerMonitor requires INA260 disabled: INA219 load monitor owns address 0x41"
+#endif
+#if ENV_INCLUDE_INA219
+#error "PowerMonitor owns both INA219 devices; disable the duplicate stock INA219 driver"
 #endif
 using namespace Adafruit_LittleFS_Namespace;
 
@@ -64,10 +68,10 @@ void PowerMonitor::begin(bool allow_checkpoint) {
   load_.sign=PM_LOAD_SIGN<0?-1:1;
   solar_.detected=probe(SOLAR)&&write16(SOLAR,INA_CFG,INA_CONTINUOUS);
   load_.detected=probe(LOAD)&&write16(LOAD,INA_CFG,INA_CONTINUOUS);
-  mcp_found_=probe(MCP);
+  detectMcp();
   if(mcp_found_) readMcp();
   const uint32_t now=millis();
-  next_sample_=next_temperature_=next_checkpoint_=now;
+  next_sample_=next_temperature_=next_checkpoint_=next_probe_=now;
   if(checkpoint_enabled_)restore();
 }
 void PowerMonitor::sample(Channel& channel,uint32_t utc) {
@@ -77,15 +81,14 @@ void PowerMonitor::sample(Channel& channel,uint32_t utc) {
   const bool ok=read16(channel.address,INA_SHUNT,raw_shunt)
              &&read16(channel.address,INA_BUS,raw_bus);
   const uint32_t now=millis();
-  // Overflow bit is 1; bit 2 (conversion ready) can be 0 in normal operation.
-  if(!ok || (raw_bus&0x02U) || channel.shunt_ohms<=0) {
+  InaReading reading{};
+  if(!ok || !decodeIna219(raw_shunt,raw_bus,channel.shunt_ohms,channel.sign,reading)) {
     channel.failures++;channel.counter.gap(now);return;
   }
-  const float shunt_v=(float)(int16_t)raw_shunt*0.00001f;
-  const float bus_v=(float)((raw_bus>>3)&0x1FFFU)*0.004f;
-  channel.volts=bus_v+shunt_v;
-  channel.milliamps=1000.0f*shunt_v/channel.shunt_ohms*channel.sign;
-  channel.milliwatts=channel.volts*channel.milliamps;
+  channel.volts=reading.volts;
+  channel.milliamps=reading.milliamps;
+  channel.milliwatts=reading.milliwatts;
+  channel.math_overflow=reading.math_overflow;
   channel.valid=true;
   const double old=channel.counter.total_mwh;
   const uint64_t old_covered=channel.counter.covered_ms;
@@ -96,12 +99,21 @@ void PowerMonitor::sample(Channel& channel,uint32_t utc) {
     history_.add(utc,delta,(uint32_t)(channel.counter.covered_ms-old_covered));
   } else today_load_+=delta;
 }
+void PowerMonitor::detectMcp() {
+  mcp_temperature_=NAN;mcp_found_=false;
+  mcp_ack_=probe(MCP);mcp_manufacturer_=mcp_device_=0;
+  if(!mcp_ack_ || !read16(MCP,0x06,mcp_manufacturer_)
+      || !read16(MCP,0x07,mcp_device_) || !isMcp9808(mcp_manufacturer_,mcp_device_))return;
+  uint16_t config=0;
+  // Wake a confirmed MCP9808 while preserving its other configuration bits.
+  mcp_found_=read16(MCP,0x01,config)&&write16(MCP,0x01,config&~0x0100U);
+}
 void PowerMonitor::readMcp() {
-  uint16_t raw=0;
-  if(!mcp_found_||!read16(MCP,0x05,raw)){mcp_temperature_=NAN;return;}
-  float t=(float)(raw&0x0FFF)/16.0f;
-  if(raw&0x1000)t-=256.0f;
-  mcp_temperature_=t;
+  float temperature=NAN;
+  if(!mcp_found_||!read16(MCP,0x05,mcp_raw_)||!decodeMcp9808(mcp_raw_,temperature)) {
+    mcp_temperature_=NAN;return;
+  }
+  mcp_temperature_=temperature;
 }
 void PowerMonitor::summary(char* out,size_t cap) const {
   snprintf(out,cap,"S=%.4f/%.4fmWh L=%.4f/%.4fmWh V=%.2f/%.2f I=%.1f/%.1fmA",
@@ -122,6 +134,7 @@ void PowerMonitor::appendTelemetry(CayenneLPP& lpp,uint8_t permissions) const {
   const Channel* channels[]={&solar_,&load_};
   for(unsigned i=0;i<2;i++) {
     const auto& c=*channels[i];const uint8_t id=100+i;
+    lpp.addDigitalInput(id,c.valid?1:0);
     if(c.valid) {
       if(c.volts>=0&&c.volts<=655.35f)lpp.addVoltage(id,c.volts);
       if(c.milliamps>=0&&c.milliamps<=65535)lpp.addCurrent(id,c.milliamps/1000);
@@ -129,14 +142,21 @@ void PowerMonitor::appendTelemetry(CayenneLPP& lpp,uint8_t permissions) const {
       if(isfinite(watts)&&watts>=-327.67f&&watts<=327.67f)lpp.addAnalogInput(id,watts);
       if(watts>=0&&watts<=65535)lpp.addPower(id,watts);
     }
-    if(c.counter.total_mwh>=0 && c.counter.total_mwh<4294967000000.0)
+    if((c.counter.good_samples || c.counter.total_mwh!=0) && c.counter.total_mwh>=0 && c.counter.total_mwh<4294967000000.0)
       lpp.addEnergy(id,(float)(c.counter.total_mwh/1000000.0));
   }
+  lpp.addDigitalInput(102,isfinite(mcp_temperature_)?1:0);
   if(isfinite(mcp_temperature_))lpp.addTemperature(102,mcp_temperature_);
   lpp.addDigitalInput(114,checkpoint_ok_?1:0);
 }
 void PowerMonitor::poll(uint32_t now,uint32_t utc) {
   utc_=utc;
+  if((uint32_t)(now-next_probe_)>=5000UL) {
+    next_probe_=now;
+    if(!solar_.detected)solar_.detected=probe(SOLAR)&&write16(SOLAR,INA_CFG,INA_CONTINUOUS);
+    if(!load_.detected)load_.detected=probe(LOAD)&&write16(LOAD,INA_CFG,INA_CONTINUOUS);
+    if(!mcp_found_){detectMcp();if(mcp_found_)readMcp();}
+  }
   const uint32_t old_day=history_.state.day;
   history_.advance(utc);
   if(utc>=1700000000UL) {
@@ -168,12 +188,28 @@ bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
   else if(!strcmp(c,"pm sensors"))
     snprintf(out,cap,"solar40:%s load41:%s mcp18:%s T=%.2fC errs=%lu/%lu cov=%u/%u%%",
       solar_.detected?"OK":"MISSING",load_.detected?"OK":"MISSING",
-      mcp_found_?"OK":"MISSING",mcp_temperature_,
+      mcp_found_?"OK":mcp_ack_?"WRONG_ID/IO":"MISSING",mcp_temperature_,
       (unsigned long)solar_.failures,(unsigned long)load_.failures,
       solar_.counter.coverage(),load_.counter.coverage());
   else if(!strcmp(c,"pm day"))
     snprintf(out,cap,"UTCday=%lu solar=%.3fmWh load=%.3fmWh restore=%lu",
       (unsigned long)utc_day_,today_solar_,today_load_,(unsigned long)restores_);
+  else if(!strcmp(c,"pm channels"))
+    snprintf(out,cap,"100 Solar;101 Load;102 Outside temp;110 Solar15m;111 Solar1h;112 TodayUTC;113 YesterdayUTC;114 Storage. Analog=W;Generic=mWh;%%=coverage");
+  else if(!strcmp(c,"pm solar")||!strcmp(c,"pm load")) {
+    const bool solar=!strcmp(c,"pm solar");const auto& ch=solar?solar_:load_;
+    if(!ch.valid)snprintf(out,cap,"%s INA219 0x%02X: %s; read_errors=%lu. Run pm i2c; check address/wiring.",
+      solar?"Solar":"Load",ch.address,ch.detected?"READ ERROR":"MISSING",(unsigned long)ch.failures);
+    else snprintf(out,cap,"%s INA219 0x%02X: %.3fV %.2fmA %.2fmW total=%.3fmWh ADC=OK mathOVF=%u",
+      solar?"Solar":"Load",ch.address,ch.volts,ch.milliamps,ch.milliwatts,ch.counter.total_mwh,ch.math_overflow?1:0);
+  }
+  else if(!strcmp(c,"pm temp"))
+    snprintf(out,cap,"MCP9808 0x18: %s T=%.3fC manufacturer=0x%04X device=0x%04X raw=0x%04X",
+      mcp_found_?"IDENTIFIED":mcp_ack_?"WRONG_ID/IO":"MISSING",mcp_temperature_,mcp_manufacturer_,mcp_device_,mcp_raw_);
+  else if(!strcmp(c,"pm i2c")) {
+    size_t n=(size_t)snprintf(out,cap,"I2C ACK:");
+    for(uint8_t a=8;a<0x78 && n+6<cap;a++)if(probe(a))n+=(size_t)snprintf(out+n,cap-n," %02X",a);
+  }
   else if(!strcmp(c,"pm solar 15m")||!strcmp(c,"pm solar 1h")
        ||!strcmp(c,"pm solar today")||!strcmp(c,"pm solar yesterday")) {
     SolarHistory::Reading reading{};
@@ -190,7 +226,7 @@ bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
   else if(!strcmp(c,"pm info"))
     snprintf(out,cap,"v=%s 20ms solar=0x40 load=0x41 MCP=0x18 R=%.3f/%.3f",
       PM_VERSION,(double)solar_.shunt_ohms,(double)load_.shunt_ohms);
-  else snprintf(out,cap,"pm status|sensors|day|version|info|solar 15m|solar 1h|solar today|solar yesterday|reset YES");
+  else snprintf(out,cap,"pm channels|solar|load|temp|i2c|sensors|version|status|day|solar 15m|solar 1h|solar today|solar yesterday|reset YES");
   return true;
 }
 bool PowerMonitor::restore() {

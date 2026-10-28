@@ -7,9 +7,9 @@
 ## Upstream, version and hardware
 
 - Upstream: [meshcore-dev/MeshCore](https://github.com/meshcore-dev/MeshCore), pinned to **`81dbae592ffad40b4212bc0b37e82b38da08f4bc`**. Its repeater header identifies itself as **v1.18.0**.
-- Local PowerMonitor version: **0.3.0**, separate from upstream. `pm version` returns the local version and source SHA. This is a custom overlay on official source, not an unmodified official release.
+- Local PowerMonitor version: **0.3.1**, separate from upstream. `pm version` returns the local version and source SHA. This is a custom overlay on official source, not an unmodified official release.
 - Base target: **`RAK_4631_repeater`**; overlay target: `RAK_4631_repeater_power_monitor`. Nordic platform 11.0.0 and the upstream framework revision are pinned.
-- CI versions: `0.3.0-dev.N`; Pi builds can use `0.3.0-pi.1`. Successful CI jobs publish pre-releases with actual compiled images, hashes and manifests.
+- CI versions: `0.3.1-dev.N`; Pi builds can use `0.3.1-pi.1`. Successful CI jobs publish pre-releases with actual compiled images, hashes and manifests.
 - Hardware: **nRF52840 RAK4631 / RAK4630 module on a compatible WisBlock base**, not RAK3401 + RAK13302 1 W.
 - **0.1.x and 0.2.x artifacts used the Mesh-America fork**. They remain historical files, not official-upstream builds. 0.1.x also broadcasts power reports. Use 0.3.x for this official-upstream, on-demand, no-LoRa-OTA profile.
 - **No device was flashed; physical hardware/client behavior is not yet bench-validated.**
@@ -23,7 +23,15 @@
 | Other supported RAK sensors / GPS | Official RAK4631 sensor support | Native upstream interfaces | Native sensor schedule |
 | RAK15001 external flash | **Unused** | No external-flash driver or OTA staging added | None |
 
-The stock INA219 sensor remains available. The stock INA260 driver is disabled because its default address `0x41` belongs to the second INA219; a compiler guard rejects builds that re-enable it. Other official RAK sensor support remains inherited. Energy integration uses direct shunt voltage and configured physical shunt resistance, independent of the INA219 calibration register.
+The custom driver owns both INA219 devices. The duplicate stock INA219 driver is disabled, as is the stock INA260 driver whose default `0x41` address belongs to the load INA219. Compiler guards enforce these exclusions. Other official RAK sensor support remains inherited. Energy integration uses direct shunt voltage and configured physical shunt resistance, independent of the INA219 calibration register.
+
+### Sensor-readout fix in 0.3.1
+
+Version 0.3.0 incorrectly rejected INA219 bus-register bit 1, which is **conversion ready**, not an error. Version 0.3.1 accepts those samples. Math overflow is bit 0 and refers to the chip's calibrated current/power calculations; this driver computes power directly from raw voltage registers and reports the flag separately in `pm solar` / `pm load` diagnostics. See the [TI INA219 datasheet, bus-voltage register](https://www.ti.com/lit/ds/symlink/ina219.pdf).
+
+MCP9808 detection now verifies manufacturer `0x0054` and device family `0x04xx`, wakes the confirmed device, and suppresses unverified temperatures. A responding device at `0x18` alone is insufficient identification. Real negative MCP9808 temperatures remain signed; the driver does not turn them positive. `pm temp` returns IDs and the raw register for diagnosis. See the [Microchip MCP9808 datasheet](https://ww1.microchip.com/downloads/en/DeviceDoc/25095A.pdf).
+
+Missing INA modules are retried every five seconds. Older discarded measurements cannot be reconstructed; valid coverage fills after installing the corrected build. Both devices must have different physical I2C addresses; the firmware does not change address jumpers automatically.
 
 ## Electrical installation
 
@@ -71,9 +79,9 @@ Solar statistics include energy harvested and **average power over measured time
 
 | Telemetry channel | Meaning | Fields / units |
 | --- | --- | --- |
-| 100 | Solar INA219 instantaneous readings and cumulative energy | Voltage V, current A, analog-input signed W, native power W, native energy kWh |
+| 100 | Solar INA219 instantaneous readings and cumulative energy | Voltage V, current A, analog-input signed W, native power W, native energy kWh; Digital Input 1 = current sample valid |
 | 101 | Load INA219 instantaneous readings and cumulative energy | Same fields as solar |
-| 102 | MCP9808 outside temperature | Temperature °C |
+| 102 | Verified MCP9808 outside temperature | Temperature °C; Digital Input 1 = valid identified sensor reading, 0 = unavailable |
 | 110 | Solar rolling last 15 minutes | Generic sensor **mWh**, analog input **average W**, native energy kWh, percentage coverage |
 | 111 | Solar rolling last 1 hour | Same fields |
 | 112 | Solar today since UTC midnight | Same fields |
@@ -81,6 +89,8 @@ Solar statistics include energy harvested and **average power over measured time
 | 114 | Snapshot checkpoint status | Digital input: 1 = saved/restored successfully; 0 = not yet saved or last save failed |
 
 The standard CayenneLPP energy field resolves only **1 Wh** and its power field only **1 W**. To retain useful solar-node precision, the same response includes generic energy in **mWh** and signed analog power in **W with 0.01-W wire resolution**. Client support determines field names, rounding, grouping and whether a refresh is automatic; firmware cannot add a custom named screen to an unchanged client. Clients may show generic channel numbers instead of the descriptions above. The remote admin `pm solar ...` commands below provide precise text readings on demand as well.
+
+Run **`pm channels`** for a compact channel-description legend, **`pm solar`** for explicitly labelled solar V/mA/mW/mWh, and **`pm load`** for the load equivalent. A `0 W` native field can hide sub-watt consumption, and an app displaying `0.0 kWh` can hide a small but nonzero energy total. Use the fine fields or these text diagnostics. The percentage on channels 110–113 is **measurement-time coverage**, not battery charge. Channel 114 value 1 means the latest snapshot save/restore succeeded. The old low-numbered stock INA219 channel (channel 4 in the reported screenshot) was a duplicate solar reading and is no longer added; both INA modules now have stable channels 100/101. Reload telemetry after upgrading if the client retains old cached fields.
 
 Unsigned LPP current/power/energy fields are omitted for negative readings rather than wrapping them into huge positive values. Signed analog power and the read-only diagnostics retain negative values. Values outside a type's range are omitted. The bounded telemetry packet prioritizes these power fields before ordinary external sensors; a fully populated sensor set may not fit in one response, and later sensor fields can be omitted by the existing encoder's size checks.
 
@@ -96,6 +106,11 @@ Use a local USB serial terminal at 115200 baud with carriage-return endings, or 
 | --- | --- |
 | `pm version` | Version and embedded source SHA |
 | `pm sensors` | Sensors at 0x40, 0x41, 0x18, temperature, error counts, coverage |
+| `pm channels` | Plain-language channel map and fine-field units |
+| `pm solar` | Labelled solar voltage, mA, mW, cumulative mWh, raw-ADC status and math-overflow flag |
+| `pm load` | Equivalent load readings, or explicit missing/read-error status |
+| `pm temp` | MCP9808 identity status, manufacturer/device IDs, raw temperature register and decoded °C |
+| `pm i2c` | Read-only I2C address-ACK scan; an ACK does not identify a sensor model |
 | `pm status` | Since-boot/cumulative mWh, voltage and current |
 | `pm day` | UTC-day solar/load totals and snapshot recovery count |
 | `pm solar 15m` | Rolling 15-minute solar mWh, measured-time average W and coverage |
@@ -125,7 +140,7 @@ Source is cloned from official [meshcore-dev/MeshCore](https://github.com/meshco
 
 Use `bash scripts/build_on_pi.sh official`, or omit the argument. Previous `rak15001`, `w25q16` and `unified` arguments are rejected rather than silently selecting another hardware profile.
 
-Outputs use `RAK4631_official_no_lora_ota_PM_v0.3.0-pi.1` names under `output/`: HEX, BIN, UF2, `.sha256` and manifest `.json`. The manifest records the official upstream URL/revision/version, local source commit, UTC build time, image sizes/hashes, application bounds, and `lora_ota: false`.
+Outputs use `RAK4631_official_no_lora_ota_PM_v0.3.1-pi.1` names under `output/`: HEX, BIN, UF2, `.sha256` and manifest `.json`. The manifest records the official upstream URL/revision/version, local source commit, UTC build time, image sizes/hashes, application bounds, and `lora_ota: false`.
 
 The raw BIN starts at **0x26000**. UF2 embeds destination addresses and uses family **0xADA52840**. Packaging rejects data at or above **0xD4000**, preserving the official ExtraFS reservation. These are application-only images, not combined bootloader/SoftDevice images or LoRa OTA packages. No custom EndF/OTAFIX trailer is generated. **Do not rename BIN to UF2 or use these images with the old fork's OTA apply commands.**
 
@@ -135,9 +150,9 @@ The separate 1 W RAK3401 + RAK13302 project remains [Lora_OT_Lora_UPDATE_1wRak](
 
 The workflow [`.github/workflows/firmware.yml`](.github/workflows/firmware.yml) runs the C++ host integration test and builds the official no-LoRa-OTA RAK4631 configuration from scratch on each push to `main`, or via **Actions > Versioned RAK4631 firmware > Run workflow**.
 
-* **Development build:** repository `VERSION` = `0.3.0`; Actions run number = `N`; binary reports `0.3.0-dev.N`.
+* **Development build:** repository `VERSION` = `0.3.1`; Actions run number = `N`; binary reports `0.3.1-dev.N`.
 * **CI artifacts:** every *successful* job provides a downloadable versioned archive under its Actions run.
-* **GitHub Releases:** once the compiler and tests pass, the workflow publishes `v0.3.0-dev.N` as a **pre-release** with actual compiled files plus hashes. A failed build **must not** produce a flashable release.
+* **GitHub Releases:** once the compiler and tests pass, the workflow publishes `v0.3.1-dev.N` as a **pre-release** with actual compiled files plus hashes. A failed build **must not** produce a flashable release.
 * **Traceability:** `pm version` and the adjacent build-manifest JSON identify the exact source commit.
 
 Version policy: increment `VERSION` for intentional feature/compatibility changes; CI run numbers disambiguate rebuilds of the same source revision. Pre-release means **not hardware-qualified**. Only upgrade to a stable `v1.0.0` after bench tests, 1-hour cumulative measurement comparison, unexpected-reset tests, and a successful recovery drill.

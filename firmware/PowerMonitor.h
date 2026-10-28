@@ -6,7 +6,7 @@
 #include "SolarHistory.h"
 #include <CayenneLPP.h>
 #ifndef PM_VERSION
-#define PM_VERSION "0.3.0-dev"
+#define PM_VERSION "0.3.1-dev"
 #endif
 #ifndef PM_SOURCE_SHA
 #define PM_SOURCE_SHA "unknown"
@@ -47,15 +47,19 @@ private:
     int8_t sign = 1;
     bool detected = false;
     bool valid = false;
+    bool math_overflow = false;
     uint32_t failures = 0;
     float volts = NAN, milliamps = NAN, milliwatts = NAN;
     Integrator counter;
   };
   Channel solar_, load_;
   bool checkpoint_enabled_ = false, mcp_found_ = false, checkpoint_ok_ = false;
+  bool mcp_ack_ = false;
+  uint16_t mcp_manufacturer_=0, mcp_device_=0, mcp_raw_=0;
   SolarHistory history_;
   float mcp_temperature_ = NAN;
   uint32_t next_sample_ = 0, next_temperature_ = 0, next_checkpoint_ = 0, utc_ = 0;
+  uint32_t next_probe_ = 0;
   uint32_t utc_day_ = 0, sequence_ = 0, restores_ = 0;
   double today_solar_ = 0, today_load_ = 0;
   static bool probe(uint8_t);
@@ -63,6 +67,7 @@ private:
   static bool write16(uint8_t, uint8_t, uint16_t);
   void sample(Channel&,uint32_t utc);
   void readMcp();
+  void detectMcp();
   void summary(char*, size_t) const;
   bool save();
   bool restore();

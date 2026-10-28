@@ -14,7 +14,7 @@ def replace_one(source, anchor, replacement, label):
 def main():
     cli=argparse.ArgumentParser()
     cli.add_argument("upstream",type=Path)
-    cli.add_argument("--version",default="0.3.0-local")
+    cli.add_argument("--version",default="0.3.1-local")
     cli.add_argument("--source-sha",default="unknown")
     args=cli.parse_args()
     for label,value in [("version",args.version),("SHA",args.source_sha)]:
@@ -65,7 +65,7 @@ def main():
 '''
     mesh_text=replace_one(mesh_text,anchor,hook+anchor,"on-demand admin diagnostics")
     mesh_file.write_text(mesh_text)
-    for file in ("PowerMonitor.h","PowerMonitor.cpp","EnergyIntegrator.h","SolarHistory.h","PowerTelemetry.h"):
+    for file in ("PowerMonitor.h","PowerMonitor.cpp","EnergyIntegrator.h","SolarHistory.h","PowerTelemetry.h","SensorDecoders.h"):
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
     # Generated for every build. Both source revision and numeric version are
     # accessible via local MeshCore USB CLI: pm version.
@@ -84,6 +84,7 @@ def main():
         "board_upload.maximum_size = 712704\n"
         "build_unflags = -Ofast\n"
         "  -D ENV_INCLUDE_INA260=1\n"
+        "  -D ENV_INCLUDE_INA219=1\n"
         "build_flags = ${env:"+base+".build_flags}\n"
         "  -Os\n"
         "  -DPM_SAMPLE_MS=20\n"
@@ -94,6 +95,7 @@ def main():
         "  -DPM_SOLAR_SIGN=1\n"
         "  -DPM_LOAD_SIGN=1\n"
         "  -DENV_INCLUDE_INA260=0\n"
+        "  -DENV_INCLUDE_INA219=0\n"
     ))
     print("Patched official MeshCore",args.version,"without LoRa OTA",args.upstream)
 

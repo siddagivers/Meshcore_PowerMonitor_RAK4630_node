@@ -5,5 +5,7 @@ g++ -std=c++17 -Wall -Wextra -Werror -I firmware tests/integrator_test.cpp -o /t
 /tmp/pm_integrator_test
 g++ -std=c++11 -Wall -Wextra -Werror -I firmware tests/history_test.cpp -o /tmp/pm_history_test
 /tmp/pm_history_test
+g++ -std=c++11 -Wall -Wextra -Werror -I firmware tests/sensor_decode_test.cpp -o /tmp/pm_sensor_decode_test
+/tmp/pm_sensor_decode_test
 python3 -m py_compile scripts/inject.py
 echo "PASS Python injection script syntax"
