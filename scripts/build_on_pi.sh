@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REV="81dbae592ffad40b4212bc0b37e82b38da08f4bc"
 URL="https://github.com/meshcore-dev/MeshCore.git"
 PROFILE="${1:-official}"
-if [[ "$PROFILE" != official ]];then echo "Only the official no-LoRa-OTA profile is supported" >&2;exit 2;fi
+if [[ "$PROFILE" != official && "$PROFILE" != official-lora-ota ]];then echo "Supported profiles: official, official-lora-ota (RAK15001 slot C only)" >&2;exit 2;fi
 command -v git >/dev/null || { echo "git required" >&2;exit 2; }
 command -v pio >/dev/null || { echo "Install PlatformIO in a Python venv: pip install platformio" >&2;exit 2; }
 python3 -c 'import intelhex' || { echo "Install build dependencies in the active venv: pip install -r requirements-build.txt" >&2;exit 2; }
@@ -17,8 +17,10 @@ UP="$ROOT/upstream-official"
 if [[ ! -d "$UP/.git" ]];then git clone "$URL" "$UP";fi
 git -C "$UP" fetch origin "$REV"
 git -C "$UP" checkout --detach "$REV"
-git -C "$UP" restore examples/simple_repeater/main.cpp examples/simple_repeater/MyMesh.cpp variants/rak4631/platformio.ini
-python3 "$ROOT/scripts/inject.py" "$UP" --version "$FULL" --source-sha "$SHA"
+git -C "$UP" restore examples/simple_repeater/main.cpp examples/simple_repeater/MyMesh.cpp variants/rak4631/platformio.ini src/Dispatcher.h
+OTA_ARGS=()
+if [[ "$PROFILE" == official-lora-ota ]];then OTA_ARGS+=(--lora-ota);fi
+python3 "$ROOT/scripts/inject.py" "$UP" --version "$FULL" --source-sha "$SHA" "${OTA_ARGS[@]}"
 (cd "$UP" && pio run -e RAK_4631_repeater_power_monitor)
 # Official upstream has no custom EndF/LoRa-OTA post-action. A BIN
 # starts at the application base; UF2 retains the HEX destination addresses.
@@ -59,6 +61,7 @@ PY
 OUT="$ROOT/output"
 mkdir -p "$OUT"
 PREFIX="RAK4631_official_no_lora_ota_PM_v${FULL}"
+if [[ "$PROFILE" == official-lora-ota ]];then PREFIX="RAK4631_official_rak15001_lora_ota_PM_v${FULL}";fi
 FOUND=0
 FILES=()
 for extension in uf2 hex bin zip;do
@@ -71,12 +74,12 @@ for extension in uf2 hex bin zip;do
 done
 if ((FOUND==0));then echo "No firmware output" >&2;exit 1;fi
 (cd "$OUT" && sha256sum "${FILES[@]}" > "${PREFIX}.sha256")
-export PM_SOURCE_SHA="$SHA" PM_FULL_VERSION="$FULL" PM_BUILD_ROOT="$ROOT"
+export PM_SOURCE_SHA="$SHA" PM_FULL_VERSION="$FULL" PM_BUILD_ROOT="$ROOT" PM_PROFILE="$PROFILE" PM_PREFIX="$PREFIX"
 python3 - <<'PY'
 from pathlib import Path
 import os,json,hashlib,datetime
 o=Path(os.environ["PM_BUILD_ROOT"])/"output"
-prefix="RAK4631_official_no_lora_ota_PM_v"+os.environ["PM_FULL_VERSION"]
+prefix=os.environ["PM_PREFIX"]
 items={}
 for f in o.glob(prefix+".*"):
  if f.suffix in (".hex",".uf2",".bin",".zip"):
@@ -87,7 +90,9 @@ metadata={
  "upstream_url":"https://github.com/meshcore-dev/MeshCore",
  "upstream_version":"v1.18.0",
  "target":"RAK_4631_repeater_power_monitor",
- "profile":"official_no_lora_ota", "lora_ota":False,
+ "profile":os.environ["PM_PROFILE"], "lora_ota":os.environ["PM_PROFILE"]=="official-lora-ota",
+ "ota_storage":"RAK15001 slot C; JEDEC C84015" if os.environ["PM_PROFILE"]=="official-lora-ota" else None,
+ "ota_transport":"authenticated MeshCore admin CLI cli1" if os.environ["PM_PROFILE"]=="official-lora-ota" else None,
  "application_start":"0x26000", "application_limit":"0xD4000",
  "dfu":{"format":"Nordic/Adafruit legacy DFU 0.5","application_only":True,"softdevice_req":"0x00B6"},
  "built_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),

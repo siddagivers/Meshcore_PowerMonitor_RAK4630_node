@@ -11,6 +11,9 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 65
+    strategy:
+      matrix:
+        profile: [official, official-lora-ota]
     steps:
       - name: Check out firmware source
         uses: actions/checkout@v4
@@ -26,20 +29,22 @@ jobs:
       - name: Run host unit tests
         run: bash tests/run_tests.sh
       - name: Install firmware build dependencies
-        run: python -m pip install -r requirements-build.txt
-      - name: Compile official MeshCore RAK4631 image without LoRa OTA
-        run: bash scripts/build_on_pi.sh official
+        run: python -m pip install -r requirements-build.txt -r requirements-ota.txt
+      - name: Test signed OTA packages, streaming verification and uploader retries
+        run: bash tests/run_ota_tests.sh
+      - name: Compile selected official MeshCore RAK4631 profile
+        run: bash scripts/build_on_pi.sh ${{ matrix.profile }}
       - name: Upload versioned build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RAK4631_official_no_lora_ota_PM_v${{ env.PM_VERSION }}
+          name: RAK4631_${{ matrix.profile }}_PM_v${{ env.PM_VERSION }}
           path: output/*
           if-no-files-found: error
       - name: Publish a GitHub pre-release only after successful compilation
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ env.PM_VERSION }}
-          name: RAK4631 PowerMonitor v${{ env.PM_VERSION }}
+          tag_name: v${{ env.PM_VERSION }}-${{ matrix.profile }}
+          name: RAK4631 PowerMonitor v${{ env.PM_VERSION }} (${{ matrix.profile }})
           target_commitish: ${{ github.sha }}
           prerelease: true
           generate_release_notes: true
@@ -47,6 +52,7 @@ jobs:
           fail_on_unmatched_files: true
           body: |
             Automated compiler-verified developer build.
-            Official meshcore-dev/MeshCore base; no LoRa OTA support.
+            Official meshcore-dev/MeshCore base; profile ${{ matrix.profile }}.
+            The optional official-lora-ota profile requires exact RAK15001 slot C + OTAFIX pairing and local signer provisioning.
             Hardware validation and bootloader pairing are not confirmed.
             Read the README and check the manifest + SHA256 before flashing.

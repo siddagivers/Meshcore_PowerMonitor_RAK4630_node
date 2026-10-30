@@ -6,3 +6,6 @@ __pycache__/
 *.pyc
 .pio/
 .env
+.ota-tools-venv/
+*.pem
+*.key

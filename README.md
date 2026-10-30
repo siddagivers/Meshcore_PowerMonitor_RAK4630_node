@@ -2,14 +2,14 @@
 
 [![Versioned firmware build](https://github.com/siddagivers/Meshcore_PowerMonitor_RAK4630_node/actions/workflows/firmware.yml/badge.svg)](https://github.com/siddagivers/Meshcore_PowerMonitor_RAK4630_node/actions/workflows/firmware.yml)
 
-**Official MeshCore v1.18.0-based experimental RAK4631 repeater firmware** with dual INA219 power monitoring, MCP9808 outside temperature, native RAK environmental sensors, and on-demand MeshCore telemetry. **LoRa OTA updates are not included.**
+**Official MeshCore v1.18.0-based experimental RAK4631 repeater firmware** with dual INA219 power monitoring, MCP9808 outside temperature, native RAK environmental sensors, and on-demand MeshCore telemetry. The default profile excludes LoRa OTA. The optional **official-lora-ota** profile adds authenticated, signed full-image remote updates through ordinary MeshCore repeaters: [setup and limitations](docs/LORA_OTA.md).
 
 ## Upstream, version and hardware
 
 - Upstream: [meshcore-dev/MeshCore](https://github.com/meshcore-dev/MeshCore), pinned to **`81dbae592ffad40b4212bc0b37e82b38da08f4bc`**. Its repeater header identifies itself as **v1.18.0**.
-- Local PowerMonitor version: **0.3.2**, separate from upstream. `pm version` returns the local version and source SHA. This is a custom overlay on official source, not an unmodified official release.
+- Local PowerMonitor version: **0.4.0**, separate from upstream. `pm version` returns the local version and source SHA. This is a custom overlay on official source, not an unmodified official release.
 - Base target: **`RAK_4631_repeater`**; overlay target: `RAK_4631_repeater_power_monitor`. Nordic platform 11.0.0 and the upstream framework revision are pinned.
-- CI versions: `0.3.2-dev.N`; Pi builds can use `0.3.2-pi.1`. Successful CI jobs publish pre-releases with actual compiled images, hashes and manifests.
+- CI versions: `0.4.0-dev.N`; Pi builds can use `0.3.2-pi.1`. Successful CI jobs publish pre-releases with actual compiled images, hashes and manifests.
 - Hardware: **nRF52840 RAK4631 / RAK4630 module on a compatible WisBlock base**, not RAK3401 + RAK13302 1 W.
 - **0.1.x and 0.2.x artifacts used the Mesh-America fork**. They remain historical files, not official-upstream builds. 0.1.x also broadcasts power reports. Use 0.3.x for this official-upstream, on-demand, no-LoRa-OTA profile.
 - **Codex has not flashed this update. Version 0.3.2 needs phone/client and hardware validation.** The user confirmed both INA219 readings on 0.3.1 and correct temperature after replacing the original MCP9808 module. User screenshots of 0.3.0-dev.9 show both INA addresses responding, roughly 62,000 discarded samples per sensor, and 0% coverage, consistent with the ready-bit bug fixed below.
@@ -21,9 +21,13 @@
 | MCP9808 | Outside temperature | I2C `0x18` | 60 s |
 | RAK1906 BME680/BSEC | Enclosure temperature, humidity, pressure, gas | Native upstream addresses | Native sensor schedule |
 | Other supported RAK sensors / GPS | Official RAK4631 sensor support | Native upstream interfaces | Native sensor schedule |
-| RAK15001 external flash | **Unused** | No external-flash driver or OTA staging added | None |
+| RAK15001 external flash | Unused in default profile; OTA staging in optional profile | Slot C, exact C8 40 15 module; matching OTAFIX bootloader required | On explicit OTA commands |
 
 The custom driver owns both INA219 devices. The duplicate stock INA219 driver is disabled, as is the stock INA260 driver whose default `0x41` address belongs to the load INA219. Compiler guards enforce these exclusions. Other official RAK sensor support remains inherited. Energy integration uses direct shunt voltage and configured physical shunt resistance, independent of the INA219 calibration register.
+
+### Optional LoRa updates in 0.4.0
+
+The new `official-lora-ota` build adds resumable, signed full-image OTA over authenticated MeshCore admin commands. It supports learned direct and multihop routes through stock repeaters, explicit verify/apply, exact RAK15001/OTAFIX pairing and local signer provisioning. It does not add an upload button to the official phone app. The first receiver installation and provisioning are local; later updates use the included Python uploader and a companion radio. See [the complete guide](docs/LORA_OTA.md). No device has been remotely flashed by Codex.
 
 ### Sensor-readout fix in 0.3.1
 
@@ -53,7 +57,7 @@ The RAK19007 charge controller can power the board from solar energy and charge 
 
 **Shunts:** default `0.100 ohm` (typical R100 marking), both channels. Check resistor markings. A 100-milliohm shunt at 700 mA dissipates 49 mW; check shunt current rating and solder connections. If yours differs, edit the `PM_SOLAR_SHUNT_OHMS` / `PM_LOAD_SHUNT_OHMS` values in `scripts/inject.py` before building. Reverse polarity gives negative power; set `PM_SOLAR_SIGN` or `PM_LOAD_SIGN` to `-1` only after verifying the wiring. With the previously tested battery wiring, firmware inverts instantaneous channel 101 presentation to make charging positive; keep `PM_LOAD_SIGN=1`.
 
-This profile adds no LoRa OTA, OTAFIX, EndF trailer, or external-flash staging. It uses the official ExtraFS-safe linker script, limiting the application to `0x26000..0xD3FFF` and preserving the filesystem reservations. The standard RAK4631 board profile specifies S140 v6.1.1; the application cannot install a bootloader or SoftDevice. If a board previously used a custom OTAFIX bootloader, verify its existing bootloader/SoftDevice compatibility locally before changing profiles. No migration or flashing is performed here.
+The default profile adds no LoRa OTA, OTAFIX, EndF trailer, or external-flash staging. The optional OTA profile is documented separately in [LoRa updates](docs/LORA_OTA.md); it does not install a bootloader or change application/storage reservations. It uses the official ExtraFS-safe linker script, limiting the application to `0x26000..0xD3FFF` and preserving the filesystem reservations. The standard RAK4631 board profile specifies S140 v6.1.1; the application cannot install a bootloader or SoftDevice. If a board previously used a custom OTAFIX bootloader, verify its existing bootloader/SoftDevice compatibility locally before changing profiles. No migration or flashing is performed here.
 
 ## What is measured, and how accurate is it?
 
@@ -152,9 +156,9 @@ The separate 1 W RAK3401 + RAK13302 project remains [Lora_OT_Lora_UPDATE_1wRak](
 
 ## GitHub Actions builds, releases and versioning
 
-The workflow [`.github/workflows/firmware.yml`](.github/workflows/firmware.yml) runs the C++ host integration test and builds the official no-LoRa-OTA RAK4631 configuration from scratch on each push to `main`, or via **Actions > Versioned RAK4631 firmware > Run workflow**.
+The workflow [`.github/workflows/firmware.yml`](.github/workflows/firmware.yml) runs the host integration/OTA package tests and builds both the default and optional LoRa OTA RAK4631 configurations from scratch on each push to `main`, or via **Actions > Versioned RAK4631 firmware > Run workflow**.
 
-* **Development build:** repository `VERSION` = `0.3.2`; Actions run number = `N`; binary reports `0.3.2-dev.N`.
+* **Development build:** repository `VERSION` = `0.4.0`; Actions run number = `N`; binary reports `0.4.0-dev.N`.
 * **CI artifacts:** every *successful* job provides a downloadable versioned archive under its Actions run.
 * **GitHub Releases:** once the compiler and tests pass, the workflow publishes `v0.3.1-dev.N` as a **pre-release** with actual compiled files plus hashes. A failed build **must not** produce a flashable release.
 * **Traceability:** `pm version` and the adjacent build-manifest JSON identify the exact source commit.

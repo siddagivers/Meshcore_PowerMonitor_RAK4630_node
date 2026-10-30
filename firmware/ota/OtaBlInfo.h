@@ -1,0 +1,360 @@
+#pragma once
+
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+// Read the bootloader's OTA capability marker so the app can decide, BEFORE staging+approving+rebooting,
+// whether THIS device's bootloader can actually apply a `.mota`. Without this the app would reboot into a
+// bootloader that silently can't apply (stock Adafruit, or an OLDER OTAFIX predating a `.mota` format
+// change) and the device would just come back up unchanged.
+//
+// Mirror of Adafruit_nRF52_Bootloader_OTAFIX/src/ota_bl_info.h - keep byte-identical.
+// nRF52 only (the bootloader flash is memory-mapped + readable by the app); a no-op elsewhere.
+
+#if defined(NRF52_PLATFORM)
+  #include "OtaFlashLayout_nrf52.h"
+#endif
+#include "OtaHybridHandoff.h"
+
+namespace mesh {
+namespace ota {
+
+// 16-byte marker: magic[8] "MOTABLDR" + apply_abi(2) + codec_mask(2) + storage flags/reserved(4).
+static const uint8_t OTA_BL_MAGIC[8] = { 'M','O','T','A','B','L','D','R' };
+
+struct OtaBlCaps {
+  bool     present = false;
+  uint16_t apply_abi = 0;    // max .mota format_ver the bootloader can apply
+  uint16_t codec_mask = 0;   // bit i set => can apply codec_id i (in-place delta = bit 2)
+  uint8_t  storage_flags = 0; // OTA_BL_STORAGE_* capability bits
+  uint8_t  optional_app_storage = 0; // separate MOTASTOR record, scoped to its qualified primary profile
+};
+
+// Independent marker for the reset-retained hybrid source. Keep this separate
+// from MOTABLDR: bootloader self-update policy relies on the exact deployed
+// storage_flags byte, and older applications must continue to parse it.
+struct OtaRamCaps {
+  bool present = false;
+  uint16_t abi = 0;
+  uint16_t record_len = 0;
+  uint32_t arena_size = 0;
+};
+
+inline bool ota_ram_caps_marker_parse(const uint8_t raw[16],
+                                      OtaRamCaps& out) {
+  out = OtaRamCaps();
+  if (!raw || memcmp(raw, MOTA_RAM_CAP_MAGIC,
+                     sizeof(MOTA_RAM_CAP_MAGIC)) != 0) {
+    return false;
+  }
+  const uint16_t abi = mota_hybrid_rd16(raw + 8u);
+  const uint16_t record_len = mota_hybrid_rd16(raw + 10u);
+  const uint32_t arena_size = mota_hybrid_rd32(raw + 12u);
+  if (abi != MOTA_RAM_CAP_ABI || record_len != MOTA_HYBRID_AUTH_LEN ||
+      arena_size != MOTA_NRF52_HYBRID_RAM_SIZE) {
+    return false;
+  }
+  out.present = true;
+  out.abi = abi;
+  out.record_len = record_len;
+  out.arena_size = arena_size;
+  return true;
+}
+
+inline OtaRamCaps ota_ram_caps_scan_aligned(const uint8_t* bytes, size_t len) {
+  OtaRamCaps result;
+  if (!bytes) return result;
+  uint8_t matches = 0;
+  for (size_t off = 0; off + 16u <= len; off += 4u) {
+    OtaRamCaps candidate;
+    if (!ota_ram_caps_marker_parse(bytes + off, candidate)) continue;
+    if (++matches != 1u) return OtaRamCaps();
+    result = candidate;
+  }
+  return matches == 1u ? result : OtaRamCaps();
+}
+
+inline bool ota_bootloader_supports_hybrid(const OtaRamCaps& caps) {
+  return caps.present && caps.abi == MOTA_RAM_CAP_ABI &&
+         caps.record_len == MOTA_HYBRID_AUTH_LEN &&
+         caps.arena_size == MOTA_NRF52_HYBRID_RAM_SIZE;
+}
+
+static const uint8_t OTA_BL_STORAGE_SD            = 0x01;
+static const uint8_t OTA_BL_STORAGE_STAGE_CEILING = 0x02;
+static const uint8_t OTA_BL_STORAGE_QSPI          = 0x04;
+static const uint8_t OTA_BL_STORAGE_BOOT_UPDATE    = 0x08;
+static const uint8_t OTA_BL_STORAGE_HEADER_W25     = 0x10;
+static const uint8_t OTA_BL_STORAGE_KNOWN          = 0x1F;
+static const uint8_t OTA_BL_PROFILE_SD_BOOT_UPDATE =
+    OTA_BL_STORAGE_SD | OTA_BL_STORAGE_BOOT_UPDATE;
+static const uint8_t OTA_BL_PROFILE_INTERNAL_BOOT_UPDATE =
+    OTA_BL_STORAGE_STAGE_CEILING | OTA_BL_STORAGE_BOOT_UPDATE;
+static const uint8_t OTA_BL_PROFILE_QSPI_BOOT_UPDATE =
+    OTA_BL_STORAGE_STAGE_CEILING | OTA_BL_STORAGE_QSPI |
+    OTA_BL_STORAGE_BOOT_UPDATE;
+static const uint8_t OTA_BL_PROFILE_RAK_AUTO_BOOT_UPDATE =
+    OTA_BL_PROFILE_QSPI_BOOT_UPDATE | OTA_BL_STORAGE_HEADER_W25;
+// A successor must retain both application update paths used by qualified
+// external stores: bit 0 CODEC_FULL and bit 2 CODEC_DETOOLS_INPLACE.
+static const uint16_t OTA_BL_REQUIRED_APP_CODEC_MASK = 0x0005u;
+
+inline uint8_t ota_bootloader_update_storage_flags() {
+#if defined(OTA_INTERNAL_BOOTLOADER_UPDATE)
+  // No external-storage bit means the ordinary internal flash store. The
+  // same store holds either an app delta or a boot package; BOOT_UPDATE marks
+  // only the privileged package capability, not a second storage backend.
+  return OTA_BL_PROFILE_INTERNAL_BOOT_UPDATE;
+#elif defined(OTA_QSPI_BOOTLOADER_UPDATE)
+  return OTA_BL_PROFILE_QSPI_BOOT_UPDATE;
+#elif defined(OTA_SD_BOOTLOADER_UPDATE)
+  // The complete container remains in the contiguous SD staging file. No
+  // internal stage-ceiling capability is implied by this external store.
+  return OTA_BL_PROFILE_SD_BOOT_UPDATE;
+#else
+  return 0;
+#endif
+}
+
+inline bool ota_bootloader_self_update_caps_valid(const OtaBlCaps& c) {
+  const uint8_t required = ota_bootloader_update_storage_flags();
+  const bool profile_ok = c.storage_flags == required
+#if defined(OTA_INTERNAL_BOOTLOADER_UPDATE) && defined(OTA_RAK_AUTO_STORE)
+      || c.storage_flags == OTA_BL_PROFILE_RAK_AUTO_BOOT_UPDATE
+#endif
+      ;
+  return required != 0 && c.present && c.apply_abi >= 3u &&
+         (c.codec_mask & OTA_BL_REQUIRED_APP_CODEC_MASK) ==
+             OTA_BL_REQUIRED_APP_CODEC_MASK &&
+         profile_ok;
+}
+
+// Prefer a continuity-capable marker over a numerically newer legacy-looking candidate. Bootloader
+// images contain the marker magic in code/literal data as well as in the real structure, so the scan
+// must not let a later plausible literal shadow the privileged marker merely because its following
+// bytes decode as a larger ABI.
+inline bool ota_bl_caps_prefer(const OtaBlCaps& current, uint16_t candidate_abi,
+                               uint8_t candidate_storage, bool require_boot_update) {
+  if (!current.present) return true;
+  if (require_boot_update) {
+    const bool candidate_boot = (candidate_storage & OTA_BL_STORAGE_BOOT_UPDATE) != 0;
+    const bool current_boot = (current.storage_flags & OTA_BL_STORAGE_BOOT_UPDATE) != 0;
+    if (candidate_boot != current_boot) return candidate_boot;
+  }
+  return candidate_abi > current.apply_abi;
+}
+
+// Scan a region whose offset zero is word-aligned. The marker structure contains
+// uint16_t fields and OTAFIX emits it aligned(4); accepting a byte-shifted magic
+// occurrence would let instruction/literal bytes masquerade as capabilities.
+inline OtaBlCaps ota_bl_caps_scan_aligned(const uint8_t* bytes, size_t len,
+                                          bool require_boot_update,
+                                          uint8_t exact_storage_flags = 0) {
+  OtaBlCaps c;
+  if (!bytes) return c;
+  uint8_t privileged_count = 0;
+  bool exact_privileged = false;
+  for (size_t off = 0; off + 16u <= len; off += 4u) {
+    const uint8_t* p = bytes + off;
+    if (p[0] != OTA_BL_MAGIC[0] || memcmp(p, OTA_BL_MAGIC, 8) != 0) continue;
+    const uint16_t abi = (uint16_t)(p[8] | ((uint16_t)p[9] << 8));
+    const uint16_t codecs = (uint16_t)(p[10] | ((uint16_t)p[11] << 8));
+    const uint8_t storage = p[12];
+    if (abi == 0 || abi == 0xFFFFu || codecs == 0 || (storage & ~OTA_BL_STORAGE_KNOWN) != 0 ||
+        p[13] != 0 || p[14] != 0 || p[15] != 0) continue;
+    const bool exact_profile = exact_storage_flags == 0 || storage == exact_storage_flags;
+    if (require_boot_update && abi >= 3u &&
+        (codecs & OTA_BL_REQUIRED_APP_CODEC_MASK) == OTA_BL_REQUIRED_APP_CODEC_MASK &&
+        (storage & OTA_BL_STORAGE_BOOT_UPDATE) != 0) {
+      // A self-update build must have one unambiguous privileged marker. Do
+      // not silently choose between two otherwise valid structures, even if
+      // one claims a different known storage profile (or only BOOT_UPDATE).
+      // Malformed magic/literal decoys were filtered above and do not count.
+      if (++privileged_count != 1u) return OtaBlCaps();
+      if (exact_profile) {
+        exact_privileged = true;
+        c.present = true;
+        c.apply_abi = abi;
+        c.codec_mask = codecs;
+        c.storage_flags = storage;
+      }
+      continue;
+    }
+    if (ota_bl_caps_prefer(c, abi, storage, require_boot_update)) {
+      c.present = true;
+      c.apply_abi = abi;
+      c.codec_mask = codecs;
+      c.storage_flags = storage;
+    }
+  }
+  if (require_boot_update &&
+      (privileged_count != 1u || !exact_privileged)) return OtaBlCaps();
+  return c;
+}
+
+// Preview 5 declared its ABI-2 marker without an explicit alignment attribute.
+// GCC therefore emitted the naturally halfword-aligned const object at address
+// 2 mod 4 in the released RAK4631 bootloader. Keep the broader modern-marker
+// scan word-aligned, but recognize this one exact legacy shape at the other
+// valid uint16_t alignment. This does not relax the privileged self-update
+// scan below.
+inline OtaBlCaps ota_bl_legacy_app_caps_scan_halfword(const uint8_t* bytes,
+                                                       size_t len) {
+  OtaBlCaps c;
+  if (!bytes) return c;
+  for (size_t off = 2u; off + 16u <= len; off += 4u) {
+    const uint8_t* p = bytes + off;
+    if (p[0] != OTA_BL_MAGIC[0] || memcmp(p, OTA_BL_MAGIC, 8) != 0) continue;
+    if (p[8] == 2u && p[9] == 0u && p[10] == (1u << 2) && p[11] == 0u &&
+        p[12] == 0u && p[13] == 0u && p[14] == 0u && p[15] == 0u) {
+      c.present = true;
+      c.apply_abi = 2u;
+      c.codec_mask = (1u << 2);
+      return c;
+    }
+  }
+  return c;
+}
+
+// Unified loaders preserve the deployed primary MOTABLDR contract: 0x0A for
+// RAK internal storage and 0x09 for Tower SD. A separate record advertises
+// optional application storage, adjacent to the unchanged, unique RAM marker.
+// Never infer optional storage from the primary profile alone.
+inline uint8_t ota_bl_optional_app_storage(const uint8_t* bytes, size_t len) {
+  static const uint8_t record[32] = {
+    'M', 'O', 'T', 'A', 'R', 'A', 'M', 'A', 1, 0, 72, 0, 0, 0, 1, 0,
+    'M', 'O', 'T', 'A', 'S', 'T', 'O', 'R', 1, 0, 16, 0, 0x14, 0, 0, 0,
+  };
+  if (!bytes || !ota_bootloader_supports_hybrid(ota_ram_caps_scan_aligned(bytes, len))) return 0;
+  unsigned matches = 0;
+  uint8_t result = 0;
+  for (size_t off = 0; off + 8u <= len; off += 4u) {
+    if (memcmp(bytes + off, record + 16u, 8u) != 0) continue;
+    // One aligned STOR record must immediately follow the one valid RAM
+    // record. A stray, malformed, truncated or duplicate declaration fails
+    // closed instead of allowing another valid record to hide it.
+    if (++matches != 1u || off < 16u || off + 16u > len ||
+        memcmp(bytes + off - 16u, record, 28u) != 0 ||
+        bytes[off + 13u] || bytes[off + 14u] || bytes[off + 15u]) return 0;
+    const uint8_t flags = bytes[off + 12u];
+    if (flags != (OTA_BL_STORAGE_QSPI | OTA_BL_STORAGE_HEADER_W25) &&
+        flags != OTA_BL_STORAGE_STAGE_CEILING) return 0;
+    result = flags;
+  }
+  return matches == 1u ? result : 0;
+}
+
+inline uint8_t ota_bl_profile_optional_app_storage(const uint8_t* bytes,
+                                                  size_t len,
+                                                  uint8_t primary_storage) {
+  const uint8_t optional = ota_bl_optional_app_storage(bytes, len);
+  if (primary_storage == OTA_BL_PROFILE_INTERNAL_BOOT_UPDATE &&
+      optional == (OTA_BL_STORAGE_QSPI | OTA_BL_STORAGE_HEADER_W25)) return optional;
+  if (primary_storage == OTA_BL_PROFILE_SD_BOOT_UPDATE &&
+      optional == OTA_BL_STORAGE_STAGE_CEILING) return optional;
+  return 0;
+}
+
+inline OtaBlCaps ota_bl_app_caps_scan(const uint8_t* bytes, size_t len) {
+  OtaBlCaps aligned = ota_bl_caps_scan_aligned(bytes, len, false);
+  if (aligned.present && aligned.apply_abi >= 3) {
+    aligned.optional_app_storage = ota_bl_profile_optional_app_storage(
+        bytes, len, aligned.storage_flags);
+    aligned.storage_flags |= aligned.optional_app_storage;
+  }
+  if (aligned.present) return aligned;
+  return ota_bl_legacy_app_caps_scan_halfword(bytes, len);
+}
+
+inline OtaBlCaps ota_bl_update_caps_scan_aligned(const uint8_t* bytes, size_t len,
+                                                  uint8_t exact_storage_flags) {
+  if (exact_storage_flags == 0) return OtaBlCaps();
+  OtaBlCaps caps = ota_bl_caps_scan_aligned(bytes, len, true, exact_storage_flags);
+  if (caps.present) {
+    // Preserve the exact privileged storage byte; callers may independently
+    // require an existing optional application capability in a successor.
+    caps.optional_app_storage = ota_bl_profile_optional_app_storage(
+        bytes, len, caps.storage_flags);
+  }
+  return caps;
+}
+
+// Scan the bootloader flash region for ordinary application-update capabilities.
+// This deliberately accepts both the legacy ABI-2 marker (codec 2, no storage
+// flags) and the newer ABI-3 marker. Compiling bootloader self-update support
+// into the application must not make an otherwise compatible older bootloader
+// disappear from the ordinary application-OTA path.
+inline OtaBlCaps ota_bootloader_app_caps() {
+#if defined(NRF52_PLATFORM)
+  const uint8_t* lo = (const uint8_t*)(uintptr_t)MOTA_NRF52_BL_START;
+  const uint8_t* hi = (const uint8_t*)(uintptr_t)MOTA_NRF52_BL_END;
+  return ota_bl_app_caps_scan(lo, (size_t)(hi - lo));
+#else
+  return OtaBlCaps();
+#endif
+}
+
+inline OtaRamCaps ota_bootloader_ram_caps() {
+#if defined(NRF52_PLATFORM) && defined(OTA_HYBRID_RAM_STORE)
+  const uint8_t* lo = (const uint8_t*)(uintptr_t)MOTA_NRF52_BL_START;
+  const uint8_t* hi = (const uint8_t*)(uintptr_t)MOTA_NRF52_BL_END;
+  return ota_ram_caps_scan_aligned(lo, (size_t)(hi - lo));
+#else
+  return OtaRamCaps();
+#endif
+}
+
+// Scan the same region using the stricter, fail-closed rules required before
+// replacing the bootloader itself. Legacy bootloaders remain valid for normal
+// application deltas, but can never enter this privileged path.
+inline OtaBlCaps ota_bootloader_update_caps() {
+#if defined(NRF52_PLATFORM) && \
+    (defined(OTA_QSPI_BOOTLOADER_UPDATE) || defined(OTA_INTERNAL_BOOTLOADER_UPDATE) || \
+     defined(OTA_SD_BOOTLOADER_UPDATE))
+  const uint8_t* lo = (const uint8_t*)(uintptr_t)MOTA_NRF52_BL_START;
+  const uint8_t* hi = (const uint8_t*)(uintptr_t)MOTA_NRF52_BL_END;
+#if defined(OTA_INTERNAL_BOOTLOADER_UPDATE) && defined(OTA_RAK_AUTO_STORE)
+  // Unified RAK applications support the existing internal board identity as
+  // well as the adaptive successor. Both require one privileged marker.
+  const OtaBlCaps caps = ota_bl_caps_scan_aligned(lo, (size_t)(hi - lo), true);
+  return ota_bootloader_self_update_caps_valid(caps) ? caps : OtaBlCaps();
+#else
+  return ota_bl_update_caps_scan_aligned(
+      lo, (size_t)(hi - lo), ota_bootloader_update_storage_flags());
+#endif
+#else
+  return OtaBlCaps();
+#endif
+}
+
+// True if this device's bootloader can apply a .mota of the given format_ver + codec_id.
+inline bool ota_bootloader_can_apply(uint8_t format_ver, uint8_t codec_id) {
+  OtaBlCaps c = ota_bootloader_app_caps();
+  return c.present && c.apply_abi >= format_ver && (c.codec_mask & (1u << codec_id)) != 0;
+}
+
+inline bool ota_bootloader_supports_expanded_stage(const OtaBlCaps& c) {
+  return c.present && (c.storage_flags & OTA_BL_STORAGE_STAGE_CEILING) != 0;
+}
+
+#if defined(NRF52_PLATFORM)
+// Use the layout's larger ceiling only when the installed bootloader advertises the matching
+// GPREGRET2 handoff. New applications remain filesystem-safe with older OTAFIX bootloaders by retaining
+// the legacy 0xD4000 ceiling. Packages sized for the expanded window still require the newer bootloader.
+inline uint32_t ota_nrf52_effective_stage_ceiling(const OtaBlCaps& c) {
+  const uint32_t desired = mota_nrf52_layout_stage_ceiling();
+  if (desired == MOTA_NRF52_STAGE_CEILING_EXPANDED) {
+    if (!ota_bootloader_supports_expanded_stage(c))
+      return MOTA_NRF52_STAGE_CEILING_LEGACY;
+  }
+  return desired;
+}
+
+inline uint32_t ota_nrf52_effective_stage_ceiling() {
+  return ota_nrf52_effective_stage_ceiling(ota_bootloader_app_caps());
+}
+#endif
+
+} // namespace ota
+} // namespace mesh

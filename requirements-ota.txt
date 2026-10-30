@@ -1,0 +1,2 @@
+cryptography>=42
+meshcore==2.3.17

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pinned official meshcore-dev/MeshCore overlay, without LoRa OTA."""
+"""Pinned official MeshCore overlay; optional RAK15001 admin-CLI LoRa OTA."""
 from pathlib import Path
 import argparse
 import re
@@ -14,8 +14,9 @@ def replace_one(source, anchor, replacement, label):
 def main():
     cli=argparse.ArgumentParser()
     cli.add_argument("upstream",type=Path)
-    cli.add_argument("--version",default="0.3.1-local")
+    cli.add_argument("--version",default="0.4.0-local")
     cli.add_argument("--source-sha",default="unknown")
+    cli.add_argument("--lora-ota",action="store_true")
     args=cli.parse_args()
     for label,value in [("version",args.version),("SHA",args.source_sha)]:
         if not re.fullmatch(r"[a-zA-Z0-9.+_-]{1,64}",value):
@@ -24,19 +25,27 @@ def main():
     main_file=args.upstream/"examples/simple_repeater/main.cpp"
     text=main_file.read_text()
     text=replace_one(text,'#include "MyMesh.h"',
-        '#include "MyMesh.h"\n#include "PowerMonitor.h"\npm::PowerMonitor power_monitor;',
+        '#include "MyMesh.h"\n#include "PowerMonitor.h"\n#include "LoRaOta.h"\npm::PowerMonitor power_monitor;',
         "main includes")
     text=replace_one(text,'  InternalFS.begin();',
         '  const bool pm_fs_ready=InternalFS.begin();',"filesystem initialization")
     text=replace_one(text,'  the_mesh.begin(fs);',
         '  the_mesh.begin(fs);\n  power_monitor.begin(pm_fs_ready);',"power monitor initialization")
     text=replace_one(text,'    reply[0] = 0;\n#ifdef ETHERNET_ENABLED',
-        '    reply[0] = 0;\n    if (!power_monitor.handleCommand(command,reply,sizeof(reply))) {\n#ifdef ETHERNET_ENABLED',"local USB commands")
+        '    reply[0] = 0;\n    if (!pm::otaCommand(command,reply,sizeof(reply),true) && !power_monitor.handleCommand(command,reply,sizeof(reply))) {\n#ifdef ETHERNET_ENABLED',"local USB commands")
     text=replace_one(text,'#endif\n    if (reply[0]) {',
         '#endif\n    }\n    if (reply[0]) {',"local USB command block")
     text=replace_one(text,"  the_mesh.loop();\n  sensors.loop();",
-        "  the_mesh.loop();\n  power_monitor.poll(millis(),rtc_clock.getCurrentTime());\n  sensors.loop();",
+        "  the_mesh.loop();\n  pm::otaPoll(the_mesh.hasPendingWork());\n  power_monitor.poll(millis(),rtc_clock.getCurrentTime());\n  sensors.loop();",
         "sensor polling")
+    if args.lora_ota:
+        text=text.replace('pm::otaPoll(the_mesh.hasPendingWork());',
+            'pm::otaPoll(the_mesh.hasPendingWork() || the_mesh.hasActiveTransmission());')
+        dispatch=args.upstream/"src/Dispatcher.h"
+        dispatch.write_text(replace_one(dispatch.read_text(),
+            'public:\n  void begin();\n  void loop();',
+            'public:\n  bool hasActiveTransmission() const { return outbound != nullptr; }\n  void begin();\n  void loop();',
+            'OTA in-flight transmission accessor'))
     text=replace_one(text,'  if (the_mesh.getNodePrefs()->powersaving_enabled && !the_mesh.hasPendingWork()) {',
         '  // Continuous power sampling requires MCU uptime.\n  if (false && the_mesh.getNodePrefs()->powersaving_enabled && !the_mesh.hasPendingWork()) {',
         "disable long sleep")
@@ -44,7 +53,7 @@ def main():
     mesh_file=main_file.parent/"MyMesh.cpp"
     mesh_text=mesh_file.read_text()
     mesh_text=replace_one(mesh_text,'#include "MyMesh.h"',
-        '#include "MyMesh.h"\n#include "PowerMonitor.h"\nextern pm::PowerMonitor power_monitor;',
+        '#include "MyMesh.h"\n#include "PowerMonitor.h"\n#include "LoRaOta.h"\nextern pm::PowerMonitor power_monitor;',
         "telemetry includes")
     mesh_text=replace_one(mesh_text,'    sensors.querySensors(perm_mask, telemetry);',
         '    power_monitor.appendTelemetry(telemetry,perm_mask);\n    sensors.querySensors(perm_mask, telemetry);',
@@ -57,6 +66,7 @@ def main():
     hook='''  if (strncmp(command,"pm",2)==0 && (!command[2] || command[2]==' ')) {
     char* pm_end=command+strlen(command);
     while(pm_end>command && (pm_end[-1]==' ' || pm_end[-1]=='\\r' || pm_end[-1]=='\\n')) *--pm_end=0;
+    if (pm::otaCommand(command,reply,153,false))return;
     if (strcmp(command,"pm reset YES")==0) {
       strcpy(reply,"Err - reset is local USB only");return;
     }
@@ -67,6 +77,16 @@ def main():
     mesh_file.write_text(mesh_text)
     for file in ("PowerMonitor.h","PowerMonitor.cpp","EnergyIntegrator.h","SolarHistory.h","PowerTelemetry.h","SensorDecoders.h"):
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
+    for file in ("LoRaOta.h","LoRaOta.cpp","OtaTransfer.h"):
+        shutil.copyfile(root/"firmware"/file,main_file.parent/file)
+    ota_dest=args.upstream/"src/helpers/pm_ota"
+    if ota_dest.exists():shutil.rmtree(ota_dest)
+    if args.lora_ota:
+        shutil.copytree(root/"firmware/ota",ota_dest)
+        # Includes from LoRaOta.cpp resolve to the vendored source directory.
+        cpp=main_file.parent/"LoRaOta.cpp"
+        cpp.write_text(cpp.read_text().replace('"ota/OtaStoreQspiNrf52.h"','<helpers/pm_ota/OtaStoreQspiNrf52.h>').replace('"ota/OtaVerify.h"','<helpers/pm_ota/OtaVerify.h>').replace('"ota/OtaBlInfo.h"','<helpers/pm_ota/OtaBlInfo.h>'))
+
     # Generated for every build. Both source revision and numeric version are
     # accessible via local MeshCore USB CLI: pm version.
     header=main_file.parent/"PowerMonitorBuild.h"
@@ -97,7 +117,23 @@ def main():
         "  -DENV_INCLUDE_INA260=0\n"
         "  -DENV_INCLUDE_INA219=0\n"
     ))
-    print("Patched official MeshCore",args.version,"without LoRa OTA",args.upstream)
+    if args.lora_ota:
+        ini.write_text(ini.read_text()+'''  -DPM_LORA_OTA=1
+  -DOTA_QSPI_STORE=1
+  -DOTA_QSPI_SHARED_WISBLOCK_SPI=1
+  -DOTA_QSPI_SCK_ARDUINO_PIN=3
+  -DOTA_QSPI_CS_ARDUINO_PIN=26
+  -DOTA_QSPI_IO0_ARDUINO_PIN=30
+  -DOTA_QSPI_IO1_ARDUINO_PIN=29
+  -DOTA_QSPI_IO2_NOT_CONNECTED=1
+  -DOTA_QSPI_IO3_NOT_CONNECTED=1
+  -DOTA_QSPI_SCK_FREQUENCY=NRF_QSPI_FREQ_32MDIV4
+  -DOTA_QSPI_EXPECTED_JEDEC_ID=0xC84015UL
+  -DOTA_QSPI_EXPECTED_SIZE=2097152UL
+build_src_filter = ${env:RAK_4631_repeater.build_src_filter}
+  +<helpers/pm_ota/>
+''')
+    print("Patched official MeshCore",args.version,"LoRa OTA:",args.lora_ota,args.upstream)
 
 if __name__=="__main__":
     main()

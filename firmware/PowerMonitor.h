@@ -6,7 +6,7 @@
 #include "SolarHistory.h"
 #include <CayenneLPP.h>
 #ifndef PM_VERSION
-#define PM_VERSION "0.3.2-dev"
+#define PM_VERSION "0.4.0-dev"
 #endif
 #ifndef PM_SOURCE_SHA
 #define PM_SOURCE_SHA "unknown"
@@ -40,6 +40,7 @@ public:
   void poll(uint32_t milliseconds, uint32_t utc_seconds);
   void appendTelemetry(CayenneLPP&,uint8_t permissions) const;
   bool handleCommand(const char*, char*, size_t);
+  bool checkpointNow() { return save(); }
 private:
   struct Channel {
     uint8_t address = 0;
