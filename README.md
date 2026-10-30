@@ -9,10 +9,10 @@
 - Upstream: [meshcore-dev/MeshCore](https://github.com/meshcore-dev/MeshCore), pinned to **`81dbae592ffad40b4212bc0b37e82b38da08f4bc`**. Its repeater header identifies itself as **v1.18.0**.
 - Local PowerMonitor version: **0.4.0**, separate from upstream. `pm version` returns the local version and source SHA. This is a custom overlay on official source, not an unmodified official release.
 - Base target: **`RAK_4631_repeater`**; overlay target: `RAK_4631_repeater_power_monitor`. Nordic platform 11.0.0 and the upstream framework revision are pinned.
-- CI versions: `0.4.0-dev.N`; Pi builds can use `0.3.2-pi.1`. Successful CI jobs publish pre-releases with actual compiled images, hashes and manifests.
+- CI versions: `0.4.0-dev.N`; Pi builds can use `0.4.0-pi.1` or `0.4.0-pi.ota.1`. Successful CI jobs publish pre-releases with actual compiled images, hashes and manifests.
 - Hardware: **nRF52840 RAK4631 / RAK4630 module on a compatible WisBlock base**, not RAK3401 + RAK13302 1 W.
 - **0.1.x and 0.2.x artifacts used the Mesh-America fork**. They remain historical files, not official-upstream builds. 0.1.x also broadcasts power reports. Use 0.3.x for this official-upstream, on-demand, no-LoRa-OTA profile.
-- **Codex has not flashed this update. Version 0.3.2 needs phone/client and hardware validation.** The user confirmed both INA219 readings on 0.3.1 and correct temperature after replacing the original MCP9808 module. User screenshots of 0.3.0-dev.9 show both INA addresses responding, roughly 62,000 discarded samples per sensor, and 0% coverage, consistent with the ready-bit bug fixed below.
+- **Codex has not flashed this update. Version 0.4.0 needs phone/client and hardware validation.** The user confirmed both INA219 readings on 0.3.1 and correct temperature after replacing the original MCP9808 module. User screenshots of 0.3.0-dev.9 show both INA addresses responding, roughly 62,000 discarded samples per sensor, and 0% coverage, consistent with the ready-bit bug fixed below.
 
 | Hardware | Role | Address / interface | Schedule |
 | --- | --- | --- | --- |
@@ -144,11 +144,11 @@ Source is cloned from official [meshcore-dev/MeshCore](https://github.com/meshco
 
 Use `bash scripts/build_on_pi.sh official`, or omit the argument. Previous `rak15001`, `w25q16` and `unified` arguments are rejected rather than silently selecting another hardware profile.
 
-Outputs use `RAK4631_official_no_lora_ota_PM_v0.3.2-pi.1` names under `output/`: HEX, BIN, UF2, application DFU **ZIP**, `.sha256` and manifest `.json`. The manifest records the official upstream URL/revision/version, local source commit, UTC build time, image sizes/hashes, application bounds, and `lora_ota: false`.
+Outputs use `RAK4631_official_no_lora_ota_PM_v0.4.0-pi.1` names under `output/`: HEX, BIN, UF2, application DFU **ZIP**, `.sha256` and manifest `.json`. The manifest records the official upstream URL/revision/version, local source commit, UTC build time, image sizes/hashes, application bounds, and `lora_ota: false`.
 
 ### Phone DFU uploader
 
-Select the versioned **`.zip` directly**, without extracting it, in a phone uploader supporting the installed RAK4631 bootloader's **Nordic/Adafruit legacy DFU 0.5** protocol. The ZIP contains the real application binary, init packet and Nordic manifest; it is not an archive of UF2/HEX files. It requires the existing **S140 v6.1.1 SoftDevice ID `0x00B6`** and does not install a bootloader or SoftDevice. Enter the board's supported DFU/bootloader mode locally before using the uploader. Do not substitute a Secure-DFU-only uploader or a different board/SoftDevice profile. The build verifies BIN equality and CRC16; phone transfer has not been tested by Codex. This local bootloader DFU path is separate from LoRa OTA and does not enable LoRa OTA.
+Select the versioned **`.zip` directly**, without extracting it, in a phone uploader supporting the installed RAK4631 bootloader's **Nordic/Adafruit legacy DFU 0.5** protocol. The ZIP contains the real application binary, init packet and Nordic manifest; it is not an archive of UF2/HEX files. It requires the existing **S140 v6.1.1 SoftDevice ID `0x00B6`** and does not install a bootloader or SoftDevice. Enter the board's supported DFU/bootloader mode locally before using the uploader. Do not substitute a Secure-DFU-only uploader or a different board/SoftDevice profile. The build verifies BIN equality and CRC16; phone transfer has not been tested by Codex. The phone transfer itself uses bootloader DFU. Installing the optional LoRa OTA receiver and provisioning its signer/pairing enables later LoRa transfers; the default profile remains without that receiver.
 
 The raw BIN starts at **0x26000**. UF2 embeds destination addresses and uses family **0xADA52840**. Packaging rejects data at or above **0xD4000**, preserving the official ExtraFS reservation. These are application-only images, not combined bootloader/SoftDevice images or LoRa OTA packages. No custom EndF/OTAFIX trailer is generated. **Do not rename BIN to UF2 or use these images with the old fork's OTA apply commands.**
 

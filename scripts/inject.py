@@ -85,7 +85,7 @@ def main():
         shutil.copytree(root/"firmware/ota",ota_dest)
         # Includes from LoRaOta.cpp resolve to the vendored source directory.
         cpp=main_file.parent/"LoRaOta.cpp"
-        cpp.write_text(cpp.read_text().replace('"ota/OtaStoreQspiNrf52.h"','<helpers/pm_ota/OtaStoreQspiNrf52.h>').replace('"ota/OtaVerify.h"','<helpers/pm_ota/OtaVerify.h>').replace('"ota/OtaBlInfo.h"','<helpers/pm_ota/OtaBlInfo.h>'))
+        cpp.write_text(re.sub(r'"ota/([^"\n]+)"',r'<helpers/pm_ota/\1>',cpp.read_text()))
 
     # Generated for every build. Both source revision and numeric version are
     # accessible via local MeshCore USB CLI: pm version.

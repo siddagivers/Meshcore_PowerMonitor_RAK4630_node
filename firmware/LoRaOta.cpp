@@ -7,6 +7,8 @@
 #include "ota/OtaStoreQspiNrf52.h"
 #include "ota/OtaVerify.h"
 #include "ota/OtaBlInfo.h"
+#include "ota/OtaByteIO.h"
+#include <Utils.h>
 #include <Arduino.h>
 #include <InternalFileSystem.h>
 #include <SHA256.h>
