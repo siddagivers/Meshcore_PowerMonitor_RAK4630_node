@@ -89,9 +89,12 @@ The official phone app has no upload button for this custom transport. Its authe
 
 ## Commands
 
+The **0.4.1-ota-test.1** test build adds a marker absent from the 0.4.0 receiver installed over Bluetooth DFU. After the mesh update, run **`ota test`** (alias **`pm ota test`**) in authenticated Repeater Admin. It replies `OTA update done - TEST1 | PM 0.4.1-ota-test.1 | git <source>`. The reply identifies the running test firmware; the same reply would appear if this test image were installed locally, so it is not independent evidence of the transfer method. `help`, `pm help` and `pm ota help` list the command. Running it does not touch flash, allocate a transfer session or activate an update.
+
 | Command | Purpose |
 |---|---|
 | `pm ota status` | Pairing, bootloader, capacity, current/durable position and transfer ID |
+| `ota test` / `pm ota test` | Read-only TEST1/version marker, added in 0.4.1 |
 | `pm ota result` | Last activation status/abort reason in this boot |
 | `pm ota begin <bytes> <SHA256>` | Start/resume one exact container (normally uploader-managed) |
 | `pm ota data <id8> <offset> <hex>` | Upload at most 40 bytes (uploader-managed) |

@@ -176,6 +176,9 @@ void PowerMonitor::clear() {
   if(checkpoint_enabled_)save();
 }
 bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
+  if(!strcmp(c,"help")||!strcmp(c,"help pm")) {
+    snprintf(out,cap,"PowerMonitor: pm help; pm ota help; ota test (NEW TEST1 firmware marker); pm version. Sensor/energy commands: pm help");return true;
+  }
   if(strncmp(c,"pm",2)!=0 || (c[2]&&c[2]!=' '))return false;
   if(!strcmp(c,"pm")||!strcmp(c,"pm status"))summary(out,cap);
   else if(!strcmp(c,"pm sensors"))
@@ -219,7 +222,7 @@ bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
   else if(!strcmp(c,"pm info"))
     snprintf(out,cap,"v=%s 20ms solar=0x40 load=0x41 MCP=0x18 R=%.3f/%.3f",
       PM_VERSION,(double)solar_.shunt_ohms,(double)load_.shunt_ohms);
-  else snprintf(out,cap,"pm channels|solar|load|temp|i2c|sensors|version|status|day|solar 15m|solar 1h|solar today|solar yesterday|reset YES");
+  else snprintf(out,cap,"pm channels|solar|load|temp|i2c|sensors|version|status|day; solar 15m|1h|today|yesterday; pm ota help; ota test; reset YES (USB only)");
   return true;
 }
 bool PowerMonitor::restore() {

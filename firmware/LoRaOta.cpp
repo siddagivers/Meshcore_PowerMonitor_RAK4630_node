@@ -133,12 +133,15 @@ bool verify(char* reply,size_t cap) {
 }
 }
 bool otaCommand(const char* command,char* reply,size_t cap,bool local) {
+  if(!strcmp(command,"ota test"))command="pm ota test";
   if(strncmp(command,"pm ota",6)|| (command[6]&&command[6]!=' '))return false;
   char copy[160];if(strlen(command)>=sizeof(copy)){snprintf(reply,cap,"Err command too long");return true;}
   strcpy(copy,command);char* state=nullptr;strtok_r(copy," ",&state);strtok_r(nullptr," ",&state);
   char* op=strtok_r(nullptr," ",&state);char* a=strtok_r(nullptr," ",&state);char* b=strtok_r(nullptr," ",&state);char* c=strtok_r(nullptr," ",&state);char* extra=strtok_r(nullptr," ",&state);
-  snprintf(reply,cap,"Err pm ota status|begin|data|verify|apply|cancel; pair/trust local USB only");
+  snprintf(reply,cap,"pm ota: status|result|begin|data|verify|apply|cancel|test; pair/trust=USB only. ota test replies OTA update done - TEST1 + version");
   if(!op||extra)return true;
+  if(!strcmp(op,"help")&&!a)return true;
+  if(!strcmp(op,"test")&&!a){snprintf(reply,cap,"OTA update done - TEST1 | PM %s | git %s",PM_VERSION,PM_SOURCE_SHA);return true;}
   if(!strcmp(op,"result")&&!a){snprintf(reply,cap,"%s",applyResult);return true;}
   if(!strcmp(op,"trust")||!strcmp(op,"pair")) {
     if(!local){snprintf(reply,cap,"Err provisioning is local USB only");return true;}
@@ -213,6 +216,9 @@ void otaPoll(bool radioPending) {
 #else
 namespace pm {
 bool otaCommand(const char* command,char* reply,size_t cap,bool) {
+  if(!strcmp(command,"ota test")||!strcmp(command,"pm ota test")) {
+    snprintf(reply,cap,"OTA update done - TEST1 | PM %s | git %s",PM_VERSION,PM_SOURCE_SHA);return true;
+  }
   if(strncmp(command,"pm ota",6))return false;
   snprintf(reply,cap,"Err LoRa OTA not enabled in this profile");return true;
 }

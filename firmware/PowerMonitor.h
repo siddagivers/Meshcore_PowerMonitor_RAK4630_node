@@ -6,7 +6,7 @@
 #include "SolarHistory.h"
 #include <CayenneLPP.h>
 #ifndef PM_VERSION
-#define PM_VERSION "0.4.0-dev"
+#define PM_VERSION "0.4.1-dev"
 #endif
 #ifndef PM_SOURCE_SHA
 #define PM_SOURCE_SHA "unknown"

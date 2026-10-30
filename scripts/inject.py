@@ -14,7 +14,7 @@ def replace_one(source, anchor, replacement, label):
 def main():
     cli=argparse.ArgumentParser()
     cli.add_argument("upstream",type=Path)
-    cli.add_argument("--version",default="0.4.0-local")
+    cli.add_argument("--version",default="0.4.1-local")
     cli.add_argument("--source-sha",default="unknown")
     cli.add_argument("--lora-ota",action="store_true")
     args=cli.parse_args()
@@ -63,7 +63,13 @@ def main():
     # denied here even if a remote sender supplies a zero timestamp; only the
     # direct local USB hook above can reset energy counters.
     anchor='  // handle ACL related commands\n'
-    hook='''  if (strncmp(command,"pm",2)==0 && (!command[2] || command[2]==' ')) {
+    hook='''  if (!strcmp(command,"help") || !strcmp(command,"help pm")) {
+    power_monitor.handleCommand(command,reply,153);return;
+  }
+  if (!strcmp(command,"ota test")) {
+    if(pm::otaCommand(command,reply,153,false))return;
+  }
+  if (strncmp(command,"pm",2)==0 && (!command[2] || command[2]==' ')) {
     char* pm_end=command+strlen(command);
     while(pm_end>command && (pm_end[-1]==' ' || pm_end[-1]=='\\r' || pm_end[-1]=='\\n')) *--pm_end=0;
     if (pm::otaCommand(command,reply,153,false))return;
@@ -92,6 +98,8 @@ def main():
     header=main_file.parent/"PowerMonitorBuild.h"
     header.write_text('#pragma once\n#define PM_VERSION "'+args.version+'"\n#define PM_SOURCE_SHA "'+args.source_sha[:12]+'"\n')
     cpp=main_file.parent/"PowerMonitor.cpp"
+    cpp.write_text('#include "PowerMonitorBuild.h"\n'+cpp.read_text())
+    cpp=main_file.parent/"LoRaOta.cpp"
     cpp.write_text('#include "PowerMonitorBuild.h"\n'+cpp.read_text())
     base="RAK_4631_repeater"
     ini=args.upstream/"variants/rak4631/platformio.ini"
