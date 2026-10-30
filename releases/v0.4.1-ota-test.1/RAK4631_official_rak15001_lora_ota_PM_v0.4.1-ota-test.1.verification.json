@@ -1,0 +1,16 @@
+{
+  "result": "PASS",
+  "version": "0.4.1-ota-test.1",
+  "source_commit": "36c607ea685eb8b90f79d46f26f8ba7bfaf54f98",
+  "binary_bytes": 380108,
+  "checks": [
+    "SHA256/sizes",
+    "HEX/BIN/bounds",
+    "UF2 family/order/bytes",
+    "DFU application/BIN/CRC16/S140 B6",
+    "new TEST1 marker absent from old installed 0.4.0 image",
+    "embedded version/source",
+    "new image signed with ephemeral key and accepted by device C++ verifier"
+  ],
+  "hardware_tested": false
+}

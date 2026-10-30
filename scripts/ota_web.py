@@ -175,6 +175,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200,(ROOT/'releases/v0.4.0-pi.ota.1/RAK4631_official_rak15001_lora_ota_PM_v0.4.0-pi.ota.1.zip').read_bytes(),'application/zip')
             if self.path=='/downloads/receiver.json':
                 return self.respond(200,(ROOT/'releases/v0.4.0-pi.ota.1/RAK4631_official_rak15001_lora_ota_PM_v0.4.0-pi.ota.1.json').read_bytes())
+            if self.path in ('/downloads/test.zip','/downloads/test.json'):
+                suffix=self.path.rsplit('.',1)[1]
+                path=ROOT/'releases/v0.4.1-ota-test.1'/('RAK4631_official_rak15001_lora_ota_PM_v0.4.1-ota-test.1.'+suffix)
+                return self.respond(200,path.read_bytes(),'application/zip' if suffix=='zip' else 'application/json')
             if re.fullmatch(r'/packages/[0-9a-f]{64}\.mota',self.path):
                 return self.respond(200,(state.packages/self.path.rsplit('/',1)[1]).read_bytes(),'application/octet-stream')
             self.respond(404,{'error':'Not found'})
