@@ -12,7 +12,9 @@ import time
 import sys
 
 HW=b"RAK4631_RAK15001_C".ljust(32,b"\0")
-TARGET=int.from_bytes(hashlib.sha256(b"RAK4631_PM_RAK15001_C").digest()[:4],"little")
+TARGET_NAME="RAK4631_PM_RAK15001_C_OTAFIX2412"
+BOOT_HASH="ec860fb46697ac4b458f4b961dec69b428380be1ce31a226cff60298f3281545"
+TARGET=int.from_bytes(hashlib.sha256(TARGET_NAME.encode()).digest()[:4],"little")
 MAX_IMAGE=712704
 BLOCK=2048
 
@@ -158,6 +160,7 @@ def main():
         manifest=json.loads(args.manifest.read_text());body=args.binary.read_bytes()
         expected=manifest["firmware"][args.binary.name]
         if not manifest.get("lora_ota") or manifest.get("ota_storage")!="RAK15001 slot C; JEDEC C84015" or expected["sha256"]!=h(body).hex():raise ValueError("Not a hash-matching OTA-profile application")
+        if manifest.get('ota_bootloader_sha256')!=BOOT_HASH or manifest.get('ota_target')!=TARGET_NAME:raise ValueError('Use the application matched to OTAFIX 2.4.12; legacy handoff builds are incompatible')
         numbers=[int(n) for n in manifest["version"].split("-")[0].split(".")]
         if len(numbers)!=3 or any(not 0<=n<=255 for n in numbers):raise ValueError("invalid version")
         version=(numbers[0]<<24)|(numbers[1]<<16)|(numbers[2]<<8)

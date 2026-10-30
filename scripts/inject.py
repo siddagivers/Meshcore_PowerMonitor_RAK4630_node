@@ -14,7 +14,7 @@ def replace_one(source, anchor, replacement, label):
 def main():
     cli=argparse.ArgumentParser()
     cli.add_argument("upstream",type=Path)
-    cli.add_argument("--version",default="0.4.1-local")
+    cli.add_argument("--version",default="0.4.2-local")
     cli.add_argument("--source-sha",default="unknown")
     cli.add_argument("--lora-ota",action="store_true")
     args=cli.parse_args()
@@ -83,7 +83,7 @@ def main():
     mesh_file.write_text(mesh_text)
     for file in ("PowerMonitor.h","PowerMonitor.cpp","EnergyIntegrator.h","SolarHistory.h","PowerTelemetry.h","SensorDecoders.h"):
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
-    for file in ("LoRaOta.h","LoRaOta.cpp","OtaTransfer.h"):
+    for file in ("LoRaOta.h","LoRaOta.cpp","OtaTransfer.h","OtaBootProfile.h"):
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
     ota_dest=args.upstream/"src/helpers/pm_ota"
     if ota_dest.exists():shutil.rmtree(ota_dest)
@@ -96,7 +96,8 @@ def main():
     # Generated for every build. Both source revision and numeric version are
     # accessible via local MeshCore USB CLI: pm version.
     header=main_file.parent/"PowerMonitorBuild.h"
-    header.write_text('#pragma once\n#define PM_VERSION "'+args.version+'"\n#define PM_SOURCE_SHA "'+args.source_sha[:12]+'"\n')
+    marker="OTA update done - TEST2" if "-ota-test." in args.version else "BASELINE firmware - OTA test not installed"
+    header.write_text('#pragma once\n#define PM_VERSION "'+args.version+'"\n#define PM_SOURCE_SHA "'+args.source_sha[:12]+'"\n#define PM_UPDATE_MARKER "'+marker+'"\n')
     cpp=main_file.parent/"PowerMonitor.cpp"
     cpp.write_text('#include "PowerMonitorBuild.h"\n'+cpp.read_text())
     cpp=main_file.parent/"LoRaOta.cpp"

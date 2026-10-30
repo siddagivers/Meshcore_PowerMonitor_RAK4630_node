@@ -1,16 +1,18 @@
 # LoRa updates through the MeshCore network (experimental)
 
+**Current 0.4.2 pairing:** exact normal OTAFIX 2.4.12 `wiscore_rak4631_auto`, S140 6.1.1; RAK15001 slot C; handoff 0x52. Follow [the matched flashing set](MATCHED_FLASHING_SET.md). The older dedicated-bootloader 0.4.0/0.4.1 packages are historical and are not compatible with this new pairing.
+
 The optional **official-lora-ota** profile keeps the pinned official MeshCore v1.18.0 base and the power monitor. It adds a targeted, authenticated admin-CLI file transfer called **CLI1**. Ordinary MeshCore repeaters forward the encrypted admin messages using their existing routing; they do not need this receiver firmware. A direct link with a zero-length path works too. This is not the Mesh-America `PAYLOAD_TYPE_OTA` distribution protocol, and `motatool serve` is not its uploader. There are no periodic OTA advertisements or unsolicited firmware broadcasts.
 
 The ordinary **official** profile remains available without LoRa OTA. Never use a no-OTA artifact as a remotely managed receiver if you need to preserve this feature.
 
 ## Hardware and first installation
 
-This profile is ONLY for a RAK4630/RAK4631 nRF52840 on the compatible WisBlock base, **RAK15001 in slot C**, exact GD25Q16C JEDEC **C8 40 15**, and the matching external-flash **RAK4631_RAK15001_C OTAFIX bootloader**. It is not for RAK3401/RAK13302, W25Q16, internal-only or automatic-storage bootloaders. No bootloader or SoftDevice is distributed or updated by this feature.
+This profile is ONLY for a RAK4630/RAK4631 nRF52840 on the compatible WisBlock base, **RAK15001 in slot C**, exact GD25Q16C JEDEC **C8 40 15**, and the exact published normal **OTAFIX 2.4.12 wiscore_rak4631_auto / S140 6.1.1 bootloader**. The application does not support RAK3401/RAK13302, W25Q16 or internal/SD fallback. It selects only RAK15001 on the unified bootloader; no other storage backend is chosen. No bootloader or SoftDevice is distributed or updated by this feature.
 
 The flash module uses standard SPI through the QSPI peripheral in single-data-line mode. Mapping: Arduino SCK=3, CS=26, MOSI=30, MISO=29; IO2/IO3 disconnected; 8 MHz. Do not share its SPI chip-select with Ethernet, SD or another SPI module. Keep existing slot conflicts, including GNSS placement, consistent with the RAK15001 slot C pairing.
 
-One local application update is required: existing 0.3.x cannot receive a firmware image over LoRa. Install the optional profile's application-only DFU ZIP using the same compatible phone DFU uploader/bootloader pairing. S140 v6.1.1, firmware ID **0x00B6**, application base **0x26000**, limit **0xD4000**, InternalFS reservations unchanged. The firmware neither replaces a bootloader nor silently switches storage layouts. An OTAFIX label alone does not prove the right storage profile. Confirm that the locally installed bootloader is the exact slot C build before pairing.
+One local application update is required: existing 0.3.x cannot receive a firmware image over LoRa. Install the optional profile's application-only DFU ZIP using the same compatible phone DFU uploader/bootloader pairing. S140 v6.1.1, firmware ID **0x00B6**, application base **0x26000**, limit **0xD4000**, InternalFS reservations unchanged. The firmware neither replaces a bootloader nor silently switches storage layouts. An OTAFIX label alone does not prove the right storage profile. Confirm that the locally installed bootloader is the exact published normal 2.4.12 build before pairing.
 
 ## One-time local provisioning
 
@@ -34,7 +36,7 @@ pm ota pair RAK4631_RAK15001_C
 pm ota status
 ```
 
-Provisioning is deliberately rejected through radio admin commands, including packets with zero timestamps. Pairing checks the installed bootloader advertises QSPI/full-image format-2 support, the running SoftDevice ID is B6 and the module responds with the exact flash identity/capacity. The local pairing command records the operator's confirmation of the physical slot and exact bootloader build; capability flags alone cannot identify its pin wiring. This is the only required local provisioning; subsequent application updates can travel through LoRa.
+Provisioning is deliberately rejected through radio admin commands, including packets with zero timestamps. Pairing checks the complete installed 40-KiB bootloader SHA256 against the published image, QSPI/full-image format-2 support, the running SoftDevice ID is B6 and the module responds with the exact flash identity/capacity. The local pairing command records the operator's confirmation of the physical slot and exact bootloader build; capability flags alone cannot identify its pin wiring. This is the only required local provisioning; subsequent application updates can travel through LoRa.
 
 `pm ota status` should include `pair=1 boot=1 flash=2097152`. A failed gate does not have a force/ignore option. `boot=0` means this bootloader/SoftDevice combination is unsupported; resolve the pairing locally rather than trying to apply an image.
 
@@ -56,7 +58,7 @@ python scripts/lora_ota.py pack output/NAME.bin output/NAME.json .keys/power-mon
 python scripts/lora_ota.py inspect update.mota
 ```
 
-The tool checks the BIN against the build manifest before signing. It appends a 56-byte EndF identity trailer to the compiled BIN, so the remotely installed image is that exact BIN plus the trailer. It uses a distinct `RAK4631_PM_RAK15001_C` target ID and `RAK4631_RAK15001_C` hardware identity. It never packages or writes a bootloader. Do not upload the phone DFU ZIP through CLI1; the remote format is the signed `.mota` produced by this tool.
+The tool checks the BIN against the build manifest before signing. It appends a 56-byte EndF identity trailer to the compiled BIN, so the remotely installed image is that exact BIN plus the trailer. It uses a distinct `RAK4631_PM_RAK15001_C_OTAFIX2412` target ID and `RAK4631_RAK15001_C` hardware identity. It never packages or writes a bootloader. Do not upload the phone DFU ZIP through CLI1; the remote format is the signed `.mota` produced by this tool.
 
 Connect a **companion radio** to the Pi/computer. This USB connection is to the local radio, not a cable to the remote repeater. Have the exact destination public key and an already learned direct or multihop route in the companion contacts. The uploader refuses an unknown/flood route, does not clear routes and never uses automatic flood fallback.
 

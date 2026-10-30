@@ -6,6 +6,7 @@ from http.server import ThreadingHTTPServer
 import json
 from pathlib import Path
 import struct
+import zipfile
 import sys
 import tempfile
 import threading
@@ -42,7 +43,7 @@ class WebTest(unittest.TestCase):
         self.assertEqual(self.request('/api/import',b'not a signed image')[0],400)
     def test_prepare_and_no_automatic_radio(self):
         self.state.create_key();binary=bytearray(b'\x55'*5000);struct.pack_into('<II',binary,0,0x2003f000,0x26021)
-        manifest={'lora_ota':True,'ota_storage':'RAK15001 slot C; JEDEC C84015','version':'0.4.0-test','firmware':{'firmware.bin':{'bytes':len(binary),'sha256':hashlib.sha256(binary).hexdigest()}}}
+        manifest={'lora_ota':True,'ota_storage':'RAK15001 slot C; JEDEC C84015','version':'0.4.2-test','ota_bootloader_sha256':lora_ota.BOOT_HASH,'ota_target':lora_ota.TARGET_NAME,'firmware':{'firmware.bin':{'bytes':len(binary),'sha256':hashlib.sha256(binary).hexdigest()}}}
         status,result=self.request('/api/prepare',{'firmware':base64.b64encode(binary).decode(),'name':'firmware.bin','manifest':manifest})
         self.assertEqual(status,200);self.assertIsNone(self.state.job);self.assertIsNone(self.state.process)
         self.assertTrue((self.state.packages/(result['sha256']+'.mota')).exists())
@@ -68,12 +69,20 @@ class WebTest(unittest.TestCase):
         self.assertNotIn('private-test-value',json.dumps(self.state.job))
         self.assertNotIn('private-test-value',' '.join(spawned.call_args.args[0]))
         self.assertNotIn('--apply',spawned.call_args.args[0]);self.assertEqual(self.state.job['sent'],40)
-    def test_actual_dfu_zip_can_be_renamed(self):
-        self.state.create_key();root=Path(__file__).resolve().parents[1]
-        prefix='RAK4631_official_rak15001_lora_ota_PM_v0.4.0-pi.ota.1'
-        folder=root/'releases/v0.4.0-pi.ota.1'
-        manifest=json.loads((folder/(prefix+'.json')).read_text());data=(folder/(prefix+'.zip')).read_bytes()
-        result=self.state.prepare({'name':'renamed-download.zip','firmware':base64.b64encode(data).decode(),'manifest':manifest})
-        self.assertEqual(result['image_bytes'],379660+56);self.assertIsNone(self.state.job)
+    def test_dfu_zip_can_be_renamed_and_old_profile_rejected(self):
+        self.state.create_key();binary=bytearray(b'\x55'*5000);struct.pack_into('<II',binary,0,0x2003f000,0x26021)
+        import binascii
+        archive=io.BytesIO()
+        with zipfile.ZipFile(archive,'w') as z:
+            z.writestr('manifest.json',json.dumps({'manifest':{'dfu_version':0.5,'application':{'bin_file':'firmware.bin','dat_file':'firmware.dat'}}}))
+            z.writestr('firmware.bin',binary)
+            z.writestr('firmware.dat',struct.pack('<HHIHHH',82,52840,0xffffffff,1,0xb6,binascii.crc_hqx(binary,0xffff)))
+        data=archive.getvalue()
+        manifest={'lora_ota':True,'ota_storage':'RAK15001 slot C; JEDEC C84015','version':'0.4.2-test','ota_bootloader_sha256':lora_ota.BOOT_HASH,'ota_target':lora_ota.TARGET_NAME,'firmware':{'real.zip':{'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()},'real.bin':{'bytes':len(binary),'sha256':hashlib.sha256(binary).hexdigest()}}}
+        request={'name':'renamed-download.zip','firmware':base64.b64encode(data).decode(),'manifest':manifest}
+        result=self.state.prepare(request)
+        self.assertEqual(result['image_bytes'],5056);self.assertIsNone(self.state.job)
+        del manifest['ota_bootloader_sha256']
+        with self.assertRaises(ValueError):self.state.prepare(request)
 
 if __name__=='__main__':unittest.main()

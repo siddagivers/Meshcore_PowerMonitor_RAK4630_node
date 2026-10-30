@@ -9,3 +9,5 @@ g++ -std=c++17 -Wall -Wextra -Werror -I tests/ota_mocks -I firmware \
 python3 -m py_compile scripts/lora_ota.py scripts/inject.py
 python3 tests/ota_radio_test.py
 python3 tests/ota_web_test.py
+g++ -std=c++17 -Wall -Wextra -Werror -I tests/ota_mocks -I firmware tests/ota_boot_profile_test.cpp -lcrypto -o /tmp/pm-ota-boot-test
+/tmp/pm-ota-boot-test

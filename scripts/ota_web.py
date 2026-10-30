@@ -62,6 +62,7 @@ class State:
         body=base64.b64decode(request['firmware'],validate=True)
         manifest=request['manifest'];name=request['name']
         if not manifest.get('lora_ota') or manifest.get('ota_storage')!='RAK15001 slot C; JEDEC C84015':raise ValueError('Select the RAK15001 LoRa OTA build and its matching JSON manifest')
+        if manifest.get('ota_bootloader_sha256')!=lora_ota.BOOT_HASH or manifest.get('ota_target')!=lora_ota.TARGET_NAME:raise ValueError('Use the application matched to OTAFIX 2.4.12; old 0.4.0/0.4.1 builds use a different handoff')
         entries=manifest.get('firmware',{});entry=entries.get(name,{})
         if not entry:
             # Browser downloads may rename files; their complete hash and
@@ -172,12 +173,12 @@ class Handler(BaseHTTPRequestHandler):
                 with state.lock:job=json.loads(json.dumps(state.job))
                 return self.respond(200,{'ports':state.ports(),'signer':state.key_info(),'job':job})
             if self.path=='/downloads/receiver.zip':
-                return self.respond(200,(ROOT/'releases/v0.4.0-pi.ota.1/RAK4631_official_rak15001_lora_ota_PM_v0.4.0-pi.ota.1.zip').read_bytes(),'application/zip')
+                return self.respond(200,(ROOT/'releases/v0.4.2-bootstrap.1/RAK4631_official_rak15001_lora_ota_PM_v0.4.2-bootstrap.1.zip').read_bytes(),'application/zip')
             if self.path=='/downloads/receiver.json':
-                return self.respond(200,(ROOT/'releases/v0.4.0-pi.ota.1/RAK4631_official_rak15001_lora_ota_PM_v0.4.0-pi.ota.1.json').read_bytes())
+                return self.respond(200,(ROOT/'releases/v0.4.2-bootstrap.1/RAK4631_official_rak15001_lora_ota_PM_v0.4.2-bootstrap.1.json').read_bytes())
             if self.path in ('/downloads/test.zip','/downloads/test.json'):
                 suffix=self.path.rsplit('.',1)[1]
-                path=ROOT/'releases/v0.4.1-ota-test.1'/('RAK4631_official_rak15001_lora_ota_PM_v0.4.1-ota-test.1.'+suffix)
+                path=ROOT/'releases/v0.4.2-ota-test.1'/('RAK4631_official_rak15001_lora_ota_PM_v0.4.2-ota-test.1.'+suffix)
                 return self.respond(200,path.read_bytes(),'application/zip' if suffix=='zip' else 'application/json')
             if re.fullmatch(r'/packages/[0-9a-f]{64}\.mota',self.path):
                 return self.respond(200,(state.packages/self.path.rsplit('/',1)[1]).read_bytes(),'application/octet-stream')

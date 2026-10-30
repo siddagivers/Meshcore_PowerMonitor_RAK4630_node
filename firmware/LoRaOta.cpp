@@ -4,6 +4,7 @@
 #ifdef PM_LORA_OTA
 #include "PowerMonitor.h"
 #include "OtaTransfer.h"
+#include "OtaBootProfile.h"
 #include "ota/OtaStoreQspiNrf52.h"
 #include "ota/OtaVerify.h"
 #include "ota/OtaBlInfo.h"
@@ -75,12 +76,18 @@ bool ensureSession() {
   return true;
 }
 bool paired() {char value[24]={};return readExact(PAIR,value,strlen(HW))&&!memcmp(value,HW,strlen(HW));}
-bool bootCompatible() {
-  const auto caps=ota_bootloader_app_caps();
-  // Conservative fixed profile: no internal-flash or automatic-storage fallback.
-  return caps.present&&caps.apply_abi>=2&&(caps.codec_mask&1)&&(caps.storage_flags&OTA_BL_STORAGE_QSPI)
-    &&*(const volatile uint16_t*)(uintptr_t)0x300C==0x00B6;
+struct BootInfo {bool ready=false;OtaBlCaps caps;uint16_t sd=0;uint8_t hash[32]={};uint8_t handoff=0;};
+const BootInfo& bootInfo() {
+  static BootInfo info;
+  if(!info.ready) {
+    info.caps=ota_bootloader_app_caps();info.sd=*(const volatile uint16_t*)(uintptr_t)0x300C;
+    mesh::Utils::sha256(info.hash,32,(const uint8_t*)(uintptr_t)MOTA_NRF52_BL_START,MOTA_NRF52_BL_END-MOTA_NRF52_BL_START);
+    info.handoff=selectOtaBootHandoff(info.caps.present,info.caps.apply_abi,info.caps.codec_mask,info.caps.storage_flags,info.sd,info.hash);
+    info.ready=true;
+  }
+  return info;
 }
+bool bootCompatible(){return bootInfo().handoff==GPREGRET2_OTA_STAGE_RAK15001;}
 bool verify(char* reply,size_t cap) {
   auto& t=session->transfer;
   if(!t.complete()||!save()){snprintf(reply,cap,"Err incomplete/checkpoint");return false;}
@@ -98,7 +105,7 @@ bool verify(char* reply,size_t cap) {
     ||!session->store.read(8,raw,sizeof(raw))){snprintf(reply,cap,"Err container framing");return false;}
   MotaManifest m;
   uint8_t hardware[32]={};memcpy(hardware,HW,strlen(HW));
-  const char* targetName="RAK4631_PM_RAK15001_C";
+  const char* targetName=OTA_TARGET_NAME;
   uint8_t target[4];mesh::Utils::sha256(target,4,(const uint8_t*)targetName,strlen(targetName));
   if(!mota_parse_manifest(raw,sizeof(raw),m)||m.is_bootloader()||!m.is_full()||m.codec_id!=CODEC_FULL
     ||!m.is_signed()||m.image_size!=m.payload_size||m.image_size<64||m.image_size>712704
@@ -138,10 +145,14 @@ bool otaCommand(const char* command,char* reply,size_t cap,bool local) {
   char copy[160];if(strlen(command)>=sizeof(copy)){snprintf(reply,cap,"Err command too long");return true;}
   strcpy(copy,command);char* state=nullptr;strtok_r(copy," ",&state);strtok_r(nullptr," ",&state);
   char* op=strtok_r(nullptr," ",&state);char* a=strtok_r(nullptr," ",&state);char* b=strtok_r(nullptr," ",&state);char* c=strtok_r(nullptr," ",&state);char* extra=strtok_r(nullptr," ",&state);
-  snprintf(reply,cap,"pm ota: status|result|begin|data|verify|apply|cancel|test; pair/trust=USB only. ota test replies OTA update done - TEST1 + version");
+  snprintf(reply,cap,"pm ota: status|boot|result|begin|data|verify|apply|cancel|test; pair/trust=USB only. ota test returns the running build marker");
   if(!op||extra)return true;
   if(!strcmp(op,"help")&&!a)return true;
-  if(!strcmp(op,"test")&&!a){snprintf(reply,cap,"OTA update done - TEST1 | PM %s | git %s",PM_VERSION,PM_SOURCE_SHA);return true;}
+  if(!strcmp(op,"test")&&!a){snprintf(reply,cap,"%s | PM %s | git %s",PM_UPDATE_MARKER,PM_VERSION,PM_SOURCE_SHA);return true;}
+  if(!strcmp(op,"boot")&&!a) {
+    const auto& b=bootInfo();snprintf(reply,cap,"BL present=%u abi=%u codec=%04x storage=%02x sd=%04x hash=%02x%02x%02x%02x%02x%02x%02x%02x handoff=%02x match=%u",
+      b.caps.present,b.caps.apply_abi,b.caps.codec_mask,b.caps.storage_flags,b.sd,b.hash[0],b.hash[1],b.hash[2],b.hash[3],b.hash[4],b.hash[5],b.hash[6],b.hash[7],b.handoff,bootCompatible());return true;
+  }
   if(!strcmp(op,"result")&&!a){snprintf(reply,cap,"%s",applyResult);return true;}
   if(!strcmp(op,"trust")||!strcmp(op,"pair")) {
     if(!local){snprintf(reply,cap,"Err provisioning is local USB only");return true;}
@@ -207,9 +218,9 @@ void otaPoll(bool radioPending) {
   if(!power_monitor.checkpointNow()){applyResult="Activation aborted: power-monitor checkpoint failed";return;}
   if(!paired()||!bootCompatible()||!session||!session->transfer.verified||!session->store.approve_for_bootloader()){applyResult="Activation aborted: pairing/verification/flash approval";return;}
   if(enabled) {
-    if(sd_power_gpregret_clr(1,0xffffffff)!=NRF_SUCCESS||sd_power_gpregret_set(1,GPREGRET2_OTA_STAGE_QSPI)!=NRF_SUCCESS
+    if(sd_power_gpregret_clr(1,0xffffffff)!=NRF_SUCCESS||sd_power_gpregret_set(1,bootInfo().handoff)!=NRF_SUCCESS
       ||sd_power_gpregret_clr(0,0xffffffff)!=NRF_SUCCESS||sd_power_gpregret_set(0,GPREGRET_OTA_APPLY)!=NRF_SUCCESS){applyResult="Activation aborted: reset handoff";return;}
-  }else{NRF_POWER->GPREGRET2=GPREGRET2_OTA_STAGE_QSPI;NRF_POWER->GPREGRET=GPREGRET_OTA_APPLY;}
+  }else{NRF_POWER->GPREGRET2=bootInfo().handoff;NRF_POWER->GPREGRET=GPREGRET_OTA_APPLY;}
   NVIC_SystemReset();
 }
 }
@@ -217,7 +228,7 @@ void otaPoll(bool radioPending) {
 namespace pm {
 bool otaCommand(const char* command,char* reply,size_t cap,bool) {
   if(!strcmp(command,"ota test")||!strcmp(command,"pm ota test")) {
-    snprintf(reply,cap,"OTA update done - TEST1 | PM %s | git %s",PM_VERSION,PM_SOURCE_SHA);return true;
+    snprintf(reply,cap,"%s | PM %s | git %s",PM_UPDATE_MARKER,PM_VERSION,PM_SOURCE_SHA);return true;
   }
   if(strncmp(command,"pm ota",6))return false;
   snprintf(reply,cap,"Err LoRa OTA not enabled in this profile");return true;

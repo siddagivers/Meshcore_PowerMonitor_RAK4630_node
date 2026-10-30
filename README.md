@@ -7,9 +7,9 @@
 ## Upstream, version and hardware
 
 - Upstream: [meshcore-dev/MeshCore](https://github.com/meshcore-dev/MeshCore), pinned to **`81dbae592ffad40b4212bc0b37e82b38da08f4bc`**. Its repeater header identifies itself as **v1.18.0**.
-- Local PowerMonitor version: **0.4.1**, separate from upstream. `pm version` returns the local version and source SHA. This is a custom overlay on official source, not an unmodified official release.
+- Local PowerMonitor version: **0.4.2**, separate from upstream. `pm version` returns the local version and source SHA. This is a custom overlay on official source, not an unmodified official release.
 - Base target: **`RAK_4631_repeater`**; overlay target: `RAK_4631_repeater_power_monitor`. Nordic platform 11.0.0 and the upstream framework revision are pinned.
-- CI versions: `0.4.1-dev.N`; Pi builds can use `0.4.0-pi.1` or `0.4.0-pi.ota.1`. Successful CI jobs publish pre-releases with actual compiled images, hashes and manifests.
+- CI versions: `0.4.2-dev.N`; Pi builds can use `0.4.0-pi.1` or `0.4.0-pi.ota.1`. Successful CI jobs publish pre-releases with actual compiled images, hashes and manifests.
 - Hardware: **nRF52840 RAK4631 / RAK4630 module on a compatible WisBlock base**, not RAK3401 + RAK13302 1 W.
 - **0.1.x and 0.2.x artifacts used the Mesh-America fork**. They remain historical files, not official-upstream builds. 0.1.x also broadcasts power reports. Use 0.3.x for this official-upstream, on-demand, no-LoRa-OTA profile.
 - **Codex has not flashed this update. Version 0.4.0 needs phone/client and hardware validation.** The user confirmed both INA219 readings on 0.3.1 and correct temperature after replacing the original MCP9808 module. User screenshots of 0.3.0-dev.9 show both INA addresses responding, roughly 62,000 discarded samples per sensor, and 0% coverage, consistent with the ready-bit bug fixed below.
@@ -25,7 +25,11 @@
 
 The custom driver owns both INA219 devices. The duplicate stock INA219 driver is disabled, as is the stock INA260 driver whose default `0x41` address belongs to the load INA219. Compiler guards enforce these exclusions. Other official RAK sensor support remains inherited. Energy integration uses direct shunt voltage and configured physical shunt resistance, independent of the INA219 calibration register.
 
-### New-firmware marker in 0.4.1
+### Matched OTAFIX 2.4.12 pair in 0.4.2
+
+Version 0.4.2 requires the exact normal `wiscore_rak4631_auto` OTAFIX 2.4.12 S140 6.1.1 bootloader and uses RAK15001 handoff **0x52** (CS P0.26). Its full bootloader SHA256 and capabilities are checked; unknown/old/recovery images are rejected. `pm ota boot` reports the check. Install the bootloader and `0.4.2-bootstrap.1` application locally, then use `0.4.2-ota-test.1` over the mesh to get the distinct **TEST2** reply. See [the flashing order](docs/MATCHED_FLASHING_SET.md). Old 0.4.0/0.4.1 files remain historical and must not be used with the new bootloader.
+
+### Historical new-firmware marker in 0.4.1
 
 After uploading the test build over the mesh, run **`ota test`** (or `pm ota test`). The reply is `OTA update done - TEST1 | PM 0.4.1-ota-test.1 | git <source>`, distinguishing it from the 0.4.0 Bluetooth-installed receiver. Find it in `help`, `pm help` or `pm ota help`. This is a read-only running-version marker, not a claim about which transport installed the image.
 
@@ -166,7 +170,7 @@ The separate 1 W RAK3401 + RAK13302 project remains [Lora_OT_Lora_UPDATE_1wRak](
 
 The workflow [`.github/workflows/firmware.yml`](.github/workflows/firmware.yml) runs the host integration/OTA package tests and builds both the default and optional LoRa OTA RAK4631 configurations from scratch on each push to `main`, or via **Actions > Versioned RAK4631 firmware > Run workflow**.
 
-* **Development build:** repository `VERSION` = `0.4.1`; Actions run number = `N`; binary reports `0.4.1-dev.N`.
+* **Development build:** repository `VERSION` = `0.4.2`; Actions run number = `N`; binary reports `0.4.2-dev.N`.
 * **CI artifacts:** every *successful* job provides a downloadable versioned archive under its Actions run.
 * **GitHub Releases:** once the compiler and tests pass, the workflow publishes `v0.3.1-dev.N` as a **pre-release** with actual compiled files plus hashes. A failed build **must not** produce a flashable release.
 * **Traceability:** `pm version` and the adjacent build-manifest JSON identify the exact source commit.

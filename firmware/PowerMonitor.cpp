@@ -177,7 +177,7 @@ void PowerMonitor::clear() {
 }
 bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
   if(!strcmp(c,"help")||!strcmp(c,"help pm")) {
-    snprintf(out,cap,"PowerMonitor: pm help; pm ota help; ota test (NEW TEST1 firmware marker); pm version. Sensor/energy commands: pm help");return true;
+    snprintf(out,cap,"PowerMonitor: pm help; pm ota help; pm ota boot; ota test (running build marker); pm version. Sensor/energy commands: pm help");return true;
   }
   if(strncmp(c,"pm",2)!=0 || (c[2]&&c[2]!=' '))return false;
   if(!strcmp(c,"pm")||!strcmp(c,"pm status"))summary(out,cap);
