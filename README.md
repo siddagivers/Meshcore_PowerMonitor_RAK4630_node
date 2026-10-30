@@ -7,12 +7,12 @@
 ## Upstream, version and hardware
 
 - Upstream: [meshcore-dev/MeshCore](https://github.com/meshcore-dev/MeshCore), pinned to **`81dbae592ffad40b4212bc0b37e82b38da08f4bc`**. Its repeater header identifies itself as **v1.18.0**.
-- Local PowerMonitor version: **0.3.1**, separate from upstream. `pm version` returns the local version and source SHA. This is a custom overlay on official source, not an unmodified official release.
+- Local PowerMonitor version: **0.3.2**, separate from upstream. `pm version` returns the local version and source SHA. This is a custom overlay on official source, not an unmodified official release.
 - Base target: **`RAK_4631_repeater`**; overlay target: `RAK_4631_repeater_power_monitor`. Nordic platform 11.0.0 and the upstream framework revision are pinned.
-- CI versions: `0.3.1-dev.N`; Pi builds can use `0.3.1-pi.1`. Successful CI jobs publish pre-releases with actual compiled images, hashes and manifests.
+- CI versions: `0.3.2-dev.N`; Pi builds can use `0.3.2-pi.1`. Successful CI jobs publish pre-releases with actual compiled images, hashes and manifests.
 - Hardware: **nRF52840 RAK4631 / RAK4630 module on a compatible WisBlock base**, not RAK3401 + RAK13302 1 W.
 - **0.1.x and 0.2.x artifacts used the Mesh-America fork**. They remain historical files, not official-upstream builds. 0.1.x also broadcasts power reports. Use 0.3.x for this official-upstream, on-demand, no-LoRa-OTA profile.
-- **Codex has not flashed this update. Physical validation of version 0.3.1 is pending.** User screenshots of 0.3.0-dev.9 show both INA addresses responding, roughly 62,000 discarded samples per sensor, and 0% coverage, consistent with the ready-bit bug fixed below.
+- **Codex has not flashed this update. Version 0.3.2 needs phone/client and hardware validation.** The user confirmed both INA219 readings on 0.3.1 and correct temperature after replacing the original MCP9808 module. User screenshots of 0.3.0-dev.9 show both INA addresses responding, roughly 62,000 discarded samples per sensor, and 0% coverage, consistent with the ready-bit bug fixed below.
 
 | Hardware | Role | Address / interface | Schedule |
 | --- | --- | --- | --- |
@@ -140,7 +140,7 @@ Source is cloned from official [meshcore-dev/MeshCore](https://github.com/meshco
 
 Use `bash scripts/build_on_pi.sh official`, or omit the argument. Previous `rak15001`, `w25q16` and `unified` arguments are rejected rather than silently selecting another hardware profile.
 
-Outputs use `RAK4631_official_no_lora_ota_PM_v0.3.1-pi.1` names under `output/`: HEX, BIN, UF2, application DFU **ZIP**, `.sha256` and manifest `.json`. The manifest records the official upstream URL/revision/version, local source commit, UTC build time, image sizes/hashes, application bounds, and `lora_ota: false`.
+Outputs use `RAK4631_official_no_lora_ota_PM_v0.3.2-pi.1` names under `output/`: HEX, BIN, UF2, application DFU **ZIP**, `.sha256` and manifest `.json`. The manifest records the official upstream URL/revision/version, local source commit, UTC build time, image sizes/hashes, application bounds, and `lora_ota: false`.
 
 ### Phone DFU uploader
 

@@ -1,0 +1,116 @@
+From https://github.com/meshcore-dev/MeshCore
+ * branch              81dbae592ffad40b4212bc0b37e82b38da08f4bc -> FETCH_HEAD
+HEAD is now at 81dbae59 Merge branch 'dev'
+M	examples/simple_repeater/MyMesh.cpp
+M	examples/simple_repeater/main.cpp
+M	variants/rak4631/platformio.ini
+Patched official MeshCore 0.3.2-pi.1 without LoRa OTA /home/pi/Meshcore_PowerMonitor_RAK4630_node/upstream-official
+Processing RAK_4631_repeater_power_monitor (platform: nordicnrf52@11.0.0; board: rak4631; framework: arduino)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/nordicnrf52/rak4631.html
+PLATFORM: Nordic nRF52 (11.0.0) > WisCore RAK4631 Board
+HARDWARE: NRF52840 64MHz, 230KB RAM, 696KB Flash
+DEBUG: Current (jlink) External (jlink, stlink)
+PACKAGES: 
+ - framework-arduinoadafruitnrf52 @ 1.10701.0+sha.d5413016 
+ - framework-cmsis @ 2.50700.210515 (5.7.0) 
+ - tool-adafruit-nrfutil @ 1.503.0 (5.3) 
+ - tool-sreccat @ 1.164.0 (1.64) 
+ - toolchain-gccarmnoneeabi @ 1.140201.0 (14.2.1)
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 47 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- SPI @ 1.0
+|-- Wire @ 1.0
+|-- RadioLib @ 7.7.1+sha.6d8934836
+|-- Crypto @ 0.4.0
+|-- RTClib @ 2.1.4
+|-- Melopero RV3028 @ 1.2.0
+|-- CayenneLPP @ 1.6.1
+|-- CustomLFS @ 0.2.1+sha.b3928ea
+|-- Adafruit INA3221 Library @ 1.0.1
+|-- Adafruit INA219 @ 1.2.3
+|-- INA226 @ 0.6.6
+|-- Adafruit INA260 Library @ 1.5.4
+|-- Adafruit AHTX0 @ 2.0.6
+|-- Adafruit BME280 Library @ 2.3.0
+|-- Adafruit BMP280 Library @ 2.6.8
+|-- Adafruit SHTC3 Library @ 1.0.2
+|-- Sensirion I2C SHT4x @ 1.1.2
+|-- Arduino_LPS22HB @ 1.0.3
+|-- Adafruit MLX90614 Library @ 2.1.7
+|-- Adafruit_VL53L0X @ 1.2.5
+|-- MicroNMEA @ 2.0.6
+|-- Adafruit BME680 Library @ 2.0.6
+|-- Adafruit BMP085 Library @ 1.2.4
+|-- Adafruit SSD1306 @ 2.5.17
+|-- SparkFun u-blox GNSS Arduino Library @ 2.2.29
+|-- BSEC Software Library @ 1.8.1492
+|-- Adafruit Little File System Libraries @ 0.11.0
+|-- Adafruit Internal File System on Bluefruit nRF52 @ 0.11.0
+|-- Adafruit nRFCrypto
+|-- ed25519
+|-- Adafruit Bluefruit nRF52 Libraries @ 0.21.0
+|-- nrf52
+|-- Adafruit GFX Library @ 1.13.0
+Building in release mode
+Compiling .pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/MyMesh.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/PowerMonitor.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/main.cpp.o
+Linking .pio/build/RAK_4631_repeater_power_monitor/firmware.elf
+Checking size .pio/build/RAK_4631_repeater_power_monitor/firmware.elf
+Building .pio/build/RAK_4631_repeater_power_monitor/firmware.hex
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [==        ]  17.8% (used 41808 bytes from 235520 bytes)
+Flash: [=====     ]  51.4% (used 366592 bytes from 712704 bytes)
+Building .pio/build/RAK_4631_repeater_power_monitor/firmware.zip
+Zip created at .pio/build/RAK_4631_repeater_power_monitor/firmware.zip
+========================= [SUCCESS] Took 22.83 seconds =========================
+
+Environment                      Status    Duration
+-------------------------------  --------  ------------
+RAK_4631_repeater_power_monitor  SUCCESS   00:00:22.827
+========================= 1 succeeded in 00:00:22.827 =========================
+Converted to uf2, output size: 733184, start address: 0x26000
+Wrote 733184 bytes to /home/pi/Meshcore_PowerMonitor_RAK4630_node/upstream-official/.pio/build/RAK_4631_repeater_power_monitor/firmware.uf2
+PASS: application-only DFU ZIP, matching BIN, CRC16, S140 0x00B6
+{
+  "version": "0.3.2-pi.1",
+  "source_commit": "e90ef78b1cc577b155264dc8b42248e45627aa0c",
+  "upstream": "81dbae592ffad40b4212bc0b37e82b38da08f4bc",
+  "upstream_url": "https://github.com/meshcore-dev/MeshCore",
+  "upstream_version": "v1.18.0",
+  "target": "RAK_4631_repeater_power_monitor",
+  "profile": "official_no_lora_ota",
+  "lora_ota": false,
+  "application_start": "0x26000",
+  "application_limit": "0xD4000",
+  "dfu": {
+    "format": "Nordic/Adafruit legacy DFU 0.5",
+    "application_only": true,
+    "softdevice_req": "0x00B6"
+  },
+  "built_utc": "2026-10-30T09:05:47.526766+00:00",
+  "firmware": {
+    "RAK4631_official_no_lora_ota_PM_v0.3.2-pi.1.bin": {
+      "bytes": 366592,
+      "sha256": "be9d168b47080a938b8b4478a845637ad35a10d79ddade7289e28b38d28f3412"
+    },
+    "RAK4631_official_no_lora_ota_PM_v0.3.2-pi.1.uf2": {
+      "bytes": 733184,
+      "sha256": "e5926fef87f7b828eac66a7a62729e30a9d653e54cd308ce622bc565fbfa9ef7"
+    },
+    "RAK4631_official_no_lora_ota_PM_v0.3.2-pi.1.hex": {
+      "bytes": 1031189,
+      "sha256": "d96582335af62cb76d5292a2521d9be9ba5a7279480d24a57a944b4250c1328c"
+    },
+    "RAK4631_official_no_lora_ota_PM_v0.3.2-pi.1.zip": {
+      "bytes": 367395,
+      "sha256": "7809ddf7f49247c9cb343b9420611598954689107e445049767af9c9245919b8"
+    }
+  }
+}
+Compiled version 0.3.2-pi.1. Artifacts: /home/pi/Meshcore_PowerMonitor_RAK4630_node/output
