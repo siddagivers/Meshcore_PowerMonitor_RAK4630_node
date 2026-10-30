@@ -1,0 +1,14 @@
+[Unit]
+Description=MeshCore Power Monitor HTTPS OTA uploader
+After=network-online.target
+
+[Service]
+WorkingDirectory=/home/pi/Meshcore_PowerMonitor_RAK4630_node
+ExecStart=/home/pi/Meshcore_PowerMonitor_RAK4630_node/.venv/bin/python -u /home/pi/Meshcore_PowerMonitor_RAK4630_node/scripts/ota_web.py --directory /home/pi/.local/share/power-monitor-web --auth /home/pi/.config/power-monitor-web/auth.json --cert /home/pi/.config/power-monitor-web/cert.pem --key /home/pi/.config/power-monitor-web/tls-key.pem --port 8443
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+UMask=0077
+
+[Install]
+WantedBy=default.target

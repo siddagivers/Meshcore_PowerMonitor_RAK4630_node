@@ -8,3 +8,4 @@ g++ -std=c++17 -Wall -Wextra -Werror -I tests/ota_mocks -I firmware \
 /tmp/pm-ota-verify-test /tmp/pm-ota-test.mota
 python3 -m py_compile scripts/lora_ota.py scripts/inject.py
 python3 tests/ota_radio_test.py
+python3 tests/ota_web_test.py

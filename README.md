@@ -27,6 +27,8 @@ The custom driver owns both INA219 devices. The duplicate stock INA219 driver is
 
 ### Optional LoRa updates in 0.4.0
 
+A login-protected web uploader is available on the Pi at **https://192.168.1.16:8443**. It prepares signed packages from BIN/DFU ZIP + matching JSON and offers separate staging and activation actions: [web uploader guide](docs/WEB_UPLOADER.md).
+
 [Download the initial OTA receiver phone DFU ZIP](releases/v0.4.0-pi.ota.1/RAK4631_official_rak15001_lora_ota_PM_v0.4.0-pi.ota.1.zip). This is the RAK15001 slot C profile and requires the local provisioning steps in the guide.
 
 The new `official-lora-ota` build adds resumable, signed full-image OTA over authenticated MeshCore admin commands. It supports learned direct and multihop routes through stock repeaters, explicit verify/apply, exact RAK15001/OTAFIX pairing and local signer provisioning. It does not add an upload button to the official phone app. The first receiver installation and provisioning are local; later updates use the included Python uploader and a companion radio. See [the complete guide](docs/LORA_OTA.md). No device has been remotely flashed by Codex.

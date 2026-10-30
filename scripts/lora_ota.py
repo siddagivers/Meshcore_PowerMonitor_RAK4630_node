@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import struct
 import time
+import sys
 
 HW=b"RAK4631_RAK15001_C".ljust(32,b"\0")
 TARGET=int.from_bytes(hashlib.sha256(b"RAK4631_PM_RAK15001_C").digest()[:4],"little")
@@ -103,7 +104,8 @@ async def upload(args):
         contact=mc.get_contact_by_key_prefix(args.target.lower())
         if not contact or contact["public_key"].lower()!=args.target.lower():raise ValueError("exact target public key must exist in companion contacts")
         if contact.get("out_path_len",-1) in (-1,255):raise ValueError("Learn a direct/repeater route first; uploader does not flood or reset routes")
-        password=getpass.getpass("Repeater admin password: ")
+        password=sys.stdin.readline().rstrip("\r\n") if getattr(args,"password_stdin",False) else getpass.getpass("Repeater admin password: ")
+        if not password:raise ValueError("admin password is required")
         if not await mc.commands.send_login_sync(contact,password,min_timeout=30):raise RuntimeError("admin login failed")
         password=None
         await mc.start_auto_message_fetching()
@@ -120,6 +122,7 @@ async def upload(args):
             response=await radio.request(f"pm ota data {tag} {offset} {data.hex()}")
             if response!=f"OK data next={offset+len(data)}":raise RuntimeError(response)
             offset+=len(data)
+            if getattr(args,"progress",False):print(f"PM_PROGRESS {offset} {len(blob)}",flush=True)
             if offset%4000<40 or offset==len(blob):print(f"{offset}/{len(blob)} bytes")
         response=await radio.request(f"pm ota verify {tag}");print(response)
         if not response.startswith("OK verified "):raise RuntimeError(response)
@@ -138,6 +141,8 @@ def main():
     send=commands.add_parser("upload");send.add_argument("image",type=Path);send.add_argument("--port",required=True);send.add_argument("--target",required=True)
     send.add_argument("--timeout",type=float,default=60);send.add_argument("--retries",type=int,default=5);send.add_argument("--pace",type=float,default=2)
     send.add_argument("--apply",action="store_true",help="Explicitly activate after verification; default only stages")
+    send.add_argument("--password-stdin",action="store_true",help="Read password from a private pipe instead of prompting")
+    send.add_argument("--progress",action="store_true",help="Emit acknowledged byte progress for the web uploader")
     args=parser.parse_args()
     if args.action=="keygen":
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
