@@ -134,20 +134,13 @@ void PowerMonitor::appendTelemetry(CayenneLPP& lpp,uint8_t permissions) const {
   const Channel* channels[]={&solar_,&load_};
   for(unsigned i=0;i<2;i++) {
     const auto& c=*channels[i];const uint8_t id=100+i;
-    lpp.addDigitalInput(id,c.valid?1:0);
     if(c.valid) {
-      if(c.volts>=0&&c.volts<=655.35f)lpp.addVoltage(id,c.volts);
-      if(c.milliamps>=0&&c.milliamps<=65535)lpp.addCurrent(id,c.milliamps/1000);
-      const float watts=c.milliwatts/1000;
-      if(isfinite(watts)&&watts>=-327.67f&&watts<=327.67f)lpp.addAnalogInput(id,watts);
-      if(watts>=0&&watts<=65535)lpp.addPower(id,watts);
+      appendInstantReading(lpp,id,c.volts,c.milliamps,c.milliwatts,i==1);
     }
     if((c.counter.good_samples || c.counter.total_mwh!=0) && c.counter.total_mwh>=0 && c.counter.total_mwh<4294967000000.0)
       lpp.addEnergy(id,(float)(c.counter.total_mwh/1000000.0));
   }
-  lpp.addDigitalInput(102,isfinite(mcp_temperature_)?1:0);
   if(isfinite(mcp_temperature_))lpp.addTemperature(102,mcp_temperature_);
-  lpp.addDigitalInput(114,checkpoint_ok_?1:0);
 }
 void PowerMonitor::poll(uint32_t now,uint32_t utc) {
   utc_=utc;
@@ -195,13 +188,13 @@ bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
     snprintf(out,cap,"UTCday=%lu solar=%.3fmWh load=%.3fmWh restore=%lu",
       (unsigned long)utc_day_,today_solar_,today_load_,(unsigned long)restores_);
   else if(!strcmp(c,"pm channels"))
-    snprintf(out,cap,"100 Solar;101 Load;102 Outside temp;110 Solar15m;111 Solar1h;112 TodayUTC;113 YesterdayUTC;114 Storage. Analog=W;Generic=mWh;%%=coverage");
+    snprintf(out,cap,"100 Solar;101 Battery(+charge/-discharge);102 Temp;110 Solar15m;111 Solar1h;112 TodayUTC;113 YesterdayUTC. Current=A;Analog=signed W;Power=abs W;Generic=mWh");
   else if(!strcmp(c,"pm solar")||!strcmp(c,"pm load")) {
     const bool solar=!strcmp(c,"pm solar");const auto& ch=solar?solar_:load_;
     if(!ch.valid)snprintf(out,cap,"%s INA219 0x%02X: %s; read_errors=%lu. Run pm i2c; check address/wiring.",
-      solar?"Solar":"Load",ch.address,ch.detected?"READ ERROR":"MISSING",(unsigned long)ch.failures);
+      solar?"Solar":"Battery",ch.address,ch.detected?"READ ERROR":"MISSING",(unsigned long)ch.failures);
     else snprintf(out,cap,"%s INA219 0x%02X: %.3fV %.2fmA %.2fmW total=%.3fmWh ADC=OK mathOVF=%u",
-      solar?"Solar":"Load",ch.address,ch.volts,ch.milliamps,ch.milliwatts,ch.counter.total_mwh,ch.math_overflow?1:0);
+      solar?"Solar":"Battery (+charge/-discharge)",ch.address,ch.volts,displayFlow(ch.milliamps,!solar),displayFlow(ch.milliwatts,!solar),ch.counter.total_mwh,ch.math_overflow?1:0);
   }
   else if(!strcmp(c,"pm temp"))
     snprintf(out,cap,"MCP9808 0x18: %s T=%.3fC manufacturer=0x%04X device=0x%04X raw=0x%04X",

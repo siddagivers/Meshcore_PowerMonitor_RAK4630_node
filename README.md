@@ -51,7 +51,7 @@ All I2C sensors share SDA/SCL and 3.3 V logic. Keep a common GND. Verify the gen
 
 The RAK19007 charge controller can power the board from solar energy and charge the battery simultaneously. **Battery current is NOT the same as the repeater consumption**. If the RAK16000 is instead inserted into the battery lead, it will measure **battery charge/discharge energy**, and the dashboard should be labeled accordingly. Measuring the *entire board's consumption* may require an external power-path change and must not be attempted by cutting an unknown PCB trace.
 
-**Shunts:** default `0.100 ohm` (typical R100 marking), both channels. Check resistor markings. A 100-milliohm shunt at 700 mA dissipates 49 mW; check shunt current rating and solder connections. If yours differs, edit the `PM_SOLAR_SHUNT_OHMS` / `PM_LOAD_SHUNT_OHMS` values in `scripts/inject.py` before building. Reverse polarity gives negative power; set `PM_SOLAR_SIGN` or `PM_LOAD_SIGN` to `-1` only after verifying the wiring.
+**Shunts:** default `0.100 ohm` (typical R100 marking), both channels. Check resistor markings. A 100-milliohm shunt at 700 mA dissipates 49 mW; check shunt current rating and solder connections. If yours differs, edit the `PM_SOLAR_SHUNT_OHMS` / `PM_LOAD_SHUNT_OHMS` values in `scripts/inject.py` before building. Reverse polarity gives negative power; set `PM_SOLAR_SIGN` or `PM_LOAD_SIGN` to `-1` only after verifying the wiring. With the previously tested battery wiring, firmware inverts instantaneous channel 101 presentation to make charging positive; keep `PM_LOAD_SIGN=1`.
 
 This profile adds no LoRa OTA, OTAFIX, EndF trailer, or external-flash staging. It uses the official ExtraFS-safe linker script, limiting the application to `0x26000..0xD3FFF` and preserving the filesystem reservations. The standard RAK4631 board profile specifies S140 v6.1.1; the application cannot install a bootloader or SoftDevice. If a board previously used a custom OTAFIX bootloader, verify its existing bootloader/SoftDevice compatibility locally before changing profiles. No migration or flashing is performed here.
 
@@ -79,20 +79,20 @@ Solar statistics include energy harvested and **average power over measured time
 
 | Telemetry channel | Meaning | Fields / units |
 | --- | --- | --- |
-| 100 | Solar INA219 instantaneous readings and cumulative energy | Voltage V, current A, analog-input signed W, native power W, native energy kWh; Digital Input 1 = current sample valid |
-| 101 | Load INA219 instantaneous readings and cumulative energy | Same fields as solar |
+| 100 | Solar INA219 instantaneous readings and cumulative energy | Voltage V, signed current A, analog-input signed W, native power magnitude W, native energy kWh |
+| 101 | Battery INA219 instantaneous readings and cumulative energy | Same fields; current and analog watts positive charging, negative discharging |
 | 102 | Verified MCP9808 outside temperature | Temperature °C; Digital Input 1 = valid identified sensor reading, 0 = unavailable |
 | 110 | Solar rolling last 15 minutes | Generic sensor **mWh**, analog input **average W**, native energy kWh, percentage coverage |
 | 111 | Solar rolling last 1 hour | Same fields |
 | 112 | Solar today since UTC midnight | Same fields |
 | 113 | Solar yesterday, completed UTC day | Same fields; unavailable days carry 0% coverage without invented energy |
-| 114 | Snapshot checkpoint status | Digital input: 1 = saved/restored successfully; 0 = not yet saved or last save failed |
+
 
 The standard CayenneLPP energy field resolves only **1 Wh** and its power field only **1 W**. To retain useful solar-node precision, the same response includes generic energy in **mWh** and signed analog power in **W with 0.01-W wire resolution**. Client support determines field names, rounding, grouping and whether a refresh is automatic; firmware cannot add a custom named screen to an unchanged client. Clients may show generic channel numbers instead of the descriptions above. The remote admin `pm solar ...` commands below provide precise text readings on demand as well.
 
-Run **`pm channels`** for a compact channel-description legend, **`pm solar`** for explicitly labelled solar V/mA/mW/mWh, and **`pm load`** for the load equivalent. A `0 W` native field can hide sub-watt consumption, and an app displaying `0.0 kWh` can hide a small but nonzero energy total. Use the fine fields or these text diagnostics. The percentage on channels 110–113 is **measurement-time coverage**, not battery charge. Channel 114 value 1 means the latest snapshot save/restore succeeded. The old low-numbered stock INA219 channel (channel 4 in the reported screenshot) was a duplicate solar reading and is no longer added; both INA modules now have stable channels 100/101. Reload telemetry after upgrading if the client retains old cached fields.
+Run **`pm channels`** for a compact channel-description legend, **`pm solar`** for explicitly labelled solar V/mA/mW/mWh, and **`pm load`** for the load equivalent. A `0 W` native field can hide sub-watt consumption, and an app displaying `0.0 kWh` can hide a small but nonzero energy total. Use the fine fields or these text diagnostics. The percentage on channels 110–113 is **measurement-time coverage**, not battery charge. Checkpoint status is available through `pm status` and `pm solar 15m`; digital indicators 100/101/102/114 are no longer transmitted. The old low-numbered stock INA219 channel (channel 4 in the reported screenshot) was a duplicate solar reading and is no longer added; both INA modules now have stable channels 100/101. Reload telemetry after upgrading if the client retains old cached fields.
 
-Unsigned LPP current/power/energy fields are omitted for negative readings rather than wrapping them into huge positive values. Signed analog power and the read-only diagnostics retain negative values. Values outside a type's range are omitted. The bounded telemetry packet prioritizes these power fields before ordinary external sensors; a fully populated sensor set may not fit in one response, and later sensor fields can be omitted by the existing encoder's size checks.
+Version 0.3.2 fixes the earlier incorrect assumption that native current is unsigned: the installed CayenneLPP encoder supports signed current at 1 mA resolution, range -32.768 to +32.767 A. Both zero and negative currents are transmitted. Channel 101 now displays charging as positive and discharging as negative, matching `pm load`. Solar polarity is unchanged. Native Power is unsigned and now always reports magnitude, while Analog Input preserves signed watts. Native energy remains unsigned and is omitted for negative cumulative totals. Existing persisted battery energy remains discharge-positive to preserve historical counters; only instantaneous battery current/power presentation changes. Invalid instantaneous samples are omitted, with diagnostic errors available via `pm sensors`/`pm load`/`pm solar`. Values outside a type's range are omitted. The bounded telemetry packet prioritizes these power fields before ordinary external sensors; a fully populated sensor set may not fit in one response, and later sensor fields can be omitted by the existing encoder's size checks.
 
 Energy is still integrated from fast samples, then stored in **10-second history buckets**. Rolling queries omit the partially overlapping oldest bucket, so their boundary resolution is up to 10 seconds; that missing time reduces coverage. Coverage for rolling windows includes startup, outages and sampling gaps. UTC-day coverage compares actual measured time with elapsed time since midnight, or 24 hours for yesterday. Solar data before clock synchronization is not assigned to a calendar day.
 
@@ -154,7 +154,7 @@ The separate 1 W RAK3401 + RAK13302 project remains [Lora_OT_Lora_UPDATE_1wRak](
 
 The workflow [`.github/workflows/firmware.yml`](.github/workflows/firmware.yml) runs the C++ host integration test and builds the official no-LoRa-OTA RAK4631 configuration from scratch on each push to `main`, or via **Actions > Versioned RAK4631 firmware > Run workflow**.
 
-* **Development build:** repository `VERSION` = `0.3.1`; Actions run number = `N`; binary reports `0.3.1-dev.N`.
+* **Development build:** repository `VERSION` = `0.3.2`; Actions run number = `N`; binary reports `0.3.2-dev.N`.
 * **CI artifacts:** every *successful* job provides a downloadable versioned archive under its Actions run.
 * **GitHub Releases:** once the compiler and tests pass, the workflow publishes `v0.3.1-dev.N` as a **pre-release** with actual compiled files plus hashes. A failed build **must not** produce a flashable release.
 * **Traceability:** `pm version` and the adjacent build-manifest JSON identify the exact source commit.
