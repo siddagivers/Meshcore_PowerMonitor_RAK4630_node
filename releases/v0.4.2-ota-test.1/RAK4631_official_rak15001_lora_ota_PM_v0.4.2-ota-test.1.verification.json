@@ -1,0 +1,19 @@
+{
+  "result": "PASS",
+  "version": "0.4.2-ota-test.1",
+  "source_commit": "58edb2355282594883b02a68995bd94f54bd7bef",
+  "binary_bytes": 380524,
+  "bootloader_sha256": "ec860fb46697ac4b458f4b961dec69b428380be1ce31a226cff60298f3281545",
+  "handoff": "0x52",
+  "checks": [
+    "SHA256/sizes",
+    "HEX/BIN/bounds",
+    "UF2 family/order/data",
+    "DFU application/BIN/CRC16/B6",
+    "distinct BASELINE/TEST2 markers",
+    "embedded version/source",
+    "actual image signed with ephemeral key and C++ verified",
+    "exact published bootloader policy and capability tests"
+  ],
+  "hardware_tested": false
+}
