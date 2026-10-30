@@ -1,0 +1,14 @@
+{
+  "result": "PASS",
+  "version": "0.4.0-pi.1",
+  "source_commit": "8c213b910826dfd9b1737556ddd62c6dbc083bf5",
+  "binary_bytes": 366768,
+  "checks": [
+    "SHA256 and sizes",
+    "HEX/BIN equivalence and application bounds",
+    "UF2 magic/family/addresses/data",
+    "DFU application-only legacy format, matching BIN, CRC16, S140 B6",
+    "embedded version/source",
+    "optional receiver profile isolation"
+  ]
+}

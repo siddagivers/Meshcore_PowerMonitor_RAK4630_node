@@ -1,0 +1,578 @@
+From https://github.com/meshcore-dev/MeshCore
+ * branch              81dbae592ffad40b4212bc0b37e82b38da08f4bc -> FETCH_HEAD
+HEAD is now at 81dbae59 Merge branch 'dev'
+M	examples/simple_repeater/MyMesh.cpp
+M	examples/simple_repeater/main.cpp
+M	src/Dispatcher.h
+M	variants/rak4631/platformio.ini
+Patched official MeshCore 0.4.0-pi.1 LoRa OTA: False /home/pi/Meshcore_PowerMonitor_RAK4630_node/upstream-official
+Processing RAK_4631_repeater_power_monitor (platform: nordicnrf52@11.0.0; board: rak4631; framework: arduino)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/nordicnrf52/rak4631.html
+PLATFORM: Nordic nRF52 (11.0.0) > WisCore RAK4631 Board
+HARDWARE: NRF52840 64MHz, 230KB RAM, 696KB Flash
+DEBUG: Current (jlink) External (jlink, stlink)
+PACKAGES: 
+ - framework-arduinoadafruitnrf52 @ 1.10701.0+sha.d5413016 
+ - framework-cmsis @ 2.50700.210515 (5.7.0) 
+ - tool-adafruit-nrfutil @ 1.503.0 (5.3) 
+ - tool-sreccat @ 1.164.0 (1.64) 
+ - toolchain-gccarmnoneeabi @ 1.140201.0 (14.2.1)
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 47 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- SPI @ 1.0
+|-- Wire @ 1.0
+|-- RadioLib @ 7.7.1+sha.6d8934836
+|-- Crypto @ 0.4.0
+|-- RTClib @ 2.1.4
+|-- Melopero RV3028 @ 1.2.0
+|-- CayenneLPP @ 1.6.1
+|-- CustomLFS @ 0.2.1+sha.b3928ea
+|-- Adafruit INA3221 Library @ 1.0.1
+|-- Adafruit INA219 @ 1.2.3
+|-- INA226 @ 0.6.6
+|-- Adafruit INA260 Library @ 1.5.4
+|-- Adafruit AHTX0 @ 2.0.6
+|-- Adafruit BME280 Library @ 2.3.0
+|-- Adafruit BMP280 Library @ 2.6.8
+|-- Adafruit SHTC3 Library @ 1.0.2
+|-- Sensirion I2C SHT4x @ 1.1.2
+|-- Arduino_LPS22HB @ 1.0.3
+|-- Adafruit MLX90614 Library @ 2.1.7
+|-- Adafruit_VL53L0X @ 1.2.5
+|-- MicroNMEA @ 2.0.6
+|-- Adafruit BME680 Library @ 2.0.6
+|-- Adafruit BMP085 Library @ 1.2.4
+|-- Adafruit SSD1306 @ 2.5.17
+|-- SparkFun u-blox GNSS Arduino Library @ 2.2.29
+|-- BSEC Software Library @ 1.8.1492
+|-- Adafruit Internal File System on Bluefruit nRF52 @ 0.11.0
+|-- nrf52
+|-- Adafruit Little File System Libraries @ 0.11.0
+|-- Adafruit nRFCrypto
+|-- ed25519
+|-- Adafruit Bluefruit nRF52 Libraries @ 0.21.0
+|-- Adafruit GFX Library @ 1.13.0
+Building in release mode
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/Adafruit_TinyUSB_API.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/Adafruit_USBD_CDC.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/Adafruit_USBD_Device.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/Adafruit_USBD_Interface.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/Adafruit_USBH_Host.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/cdc/Adafruit_USBH_CDC.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/hid/Adafruit_USBD_HID.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/midi/Adafruit_USBD_MIDI.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/msc/Adafruit_USBD_MSC.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/msc/Adafruit_USBH_MSC.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/ports/ch32/Adafruit_TinyUSB_ch32.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/ports/esp32/Adafruit_TinyUSB_esp32.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/ports/nrf/Adafruit_TinyUSB_nrf.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/ports/rp2040/Adafruit_TinyUSB_rp2040.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/ports/samd/Adafruit_TinyUSB_samd.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/video/Adafruit_USBD_Video.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/arduino/webusb/Adafruit_USBD_WebUSB.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/audio/audio_device.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/bth/bth_device.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/cdc/cdc_device.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/cdc/cdc_host.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/dfu/dfu_device.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/dfu/dfu_rt_device.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/hid/hid_device.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/hid/hid_host.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/midi/midi_device.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/midi/midi_host.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/msc/msc_device.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/msc/msc_host.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/net/ecm_rndis_device.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/net/ncm_device.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/usbtmc/usbtmc_device.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/vendor/vendor_device.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/class/video/video_device.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/common/tusb_fifo.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/device/usbd.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/device/usbd_control.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/host/hub.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/host/usbh.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/analog/max3421/hcd_max3421.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/microchip/samd/dcd_samd.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/nordic/nrf5x/dcd_nrf5x.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/raspberrypi/pio_usb/dcd_pio_usb.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/raspberrypi/pio_usb/hcd_pio_usb.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/raspberrypi/rp2040/dcd_rp2040.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/raspberrypi/rp2040/hcd_rp2040.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/raspberrypi/rp2040/rp2040_usb.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/st/stm32_fsdev/dcd_stm32_fsdev.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/synopsys/dwc2/dcd_dwc2.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/synopsys/dwc2/dwc2_common.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/synopsys/dwc2/hcd_dwc2.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/wch/dcd_ch32_usbfs.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/portable/wch/dcd_ch32_usbhs.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc11/Adafruit_TinyUSB_Arduino/tusb.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/LoRaOta.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/MyMesh.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/PowerMonitor.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/UITask.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/examples/simple_repeater/main.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/variants/rak4631/RAK4631Board.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/variants/rak4631/target.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/variants/rak4631/variant.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/Dispatcher.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/Identity.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/Mesh.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/Packet.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/Utils.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/armstubs.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/AdvertDataHelpers.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/ArduinoSerialInterface.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/AutoDiscoverRTCClock.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/BaseChatMesh.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/ClientACL.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/CommonCLI.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/CommonRadioPrefs.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/ConfigSerializer.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/DynamicConfigSerializer.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/ESP32Board.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/IdentityStore.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/NRF52Board.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/RTC_RX8130CE.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/RegionMap.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/StaticPoolPacketManager.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/TransportKeyStore.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/TxtDataHelpers.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/bridges/BridgeBase.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/radiolib/RadioLibWrappers.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/sensors/EnvironmentSensorManager.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/sensors/RAK12035_SoilMoisture.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/ui/MomentaryButton.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/src/helpers/ui/SSD1306Display.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib221/SPI/SPI.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib221/SPI/SPI_nrf52832.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib262/Wire/Wire_nRF52.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/Hal.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib221/libSPI.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib221/libSPI.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/Module.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/hal/Arduino/ArduinoHal.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/hal/ESP-IDF/EspHal.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib262/libWire.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib262/libWire.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/hal/RPiPico/PicoHal.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/hal/Stm32duino/Stm32wlHal.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/CC1101/CC1101.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LLCC68/LLCC68.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR11x0/LR1110.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR11x0/LR1120.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR11x0/LR1121.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR11x0/LR11x0.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR11x0/LR11x0_commands.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR11x0/LR11x0_crypto.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR11x0/LR11x0_gnss.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR11x0/LR11x0_wifi.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR11x0/LR_common.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR2021/LR2021.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR2021/LR2021_cmds_chip_control.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR2021/LR2021_cmds_flrc.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR2021/LR2021_cmds_gfsk.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR2021/LR2021_cmds_lora.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR2021/LR2021_cmds_misc.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR2021/LR2021_cmds_ook.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR2021/LR2021_cmds_oqpsk.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR2021/LR2021_cmds_radio.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR2021/LR2021_cmds_ranging.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/LR2021/LR2021_config.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/RF69/RF69.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX123x/SX1231.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX123x/SX1233.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX126x/STM32WLx.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX126x/SX1261.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX126x/SX1262.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX126x/SX1268.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX126x/SX126x.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX126x/SX126x_LR_FHSS.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX126x/SX126x_commands.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX126x/SX126x_config.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX127x/SX1272.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX127x/SX1273.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX127x/SX1276.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX127x/SX1277.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX127x/SX1278.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX127x/SX1279.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX127x/SX127x.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX128x/SX1280.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX128x/SX1281.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX128x/SX1282.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/SX128x/SX128x.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/Si443x/Si4430.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/Si443x/Si4431.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/Si443x/Si4432.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/Si443x/Si443x.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/modules/nRF24/nRF24.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/ADSB/ADSB.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/AFSK/AFSK.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/APRS/APRS.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/AX25/AX25.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/BellModem/BellModem.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/ExternalRadio/ExternalRadio.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/FSK4/FSK4.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/Hellschreiber/Hellschreiber.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/LoRaWAN/LoRaWAN.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/LoRaWAN/LoRaWANBands.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/LoRaWAN/LoRaWANPacMan.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/LoRaWAN/LoRaWANPackageTS003.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/LoRaWAN/LoRaWANPackageTS009.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/Morse/Morse.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/Pager/Pager.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/PhysicalLayer/PhysicalLayer.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/Print/ITA2String.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/Print/Print.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/RTTY/RTTY.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/protocols/SSTV/SSTV.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/utils/BCH.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/utils/CRC.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/utils/ConvCode.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/utils/Cryptography.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf35/RadioLib/utils/Utils.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/AES128.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/AES192.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/AES256.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/AESCommon.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/AESEsp32.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/AuthenticatedCipher.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/BLAKE2b.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/BLAKE2s.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libf35/libRadioLib.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libf35/libRadioLib.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/BigNumberUtil.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/BlockCipher.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/CTR.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/ChaCha.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/ChaChaPoly.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/Cipher.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/Crypto.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/Curve25519.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/EAX.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/Ed25519.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/GCM.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/GF128.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/GHASH.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/HKDF.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/Hash.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/KeccakCore.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/NoiseSource.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/OMAC.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/P521.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/Poly1305.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/RNG.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/SHA224.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/SHA256.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/SHA3.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/SHA384.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/SHA512.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/SHAKE.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/XOF.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib740/Crypto/XTS.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib091/Adafruit BusIO/Adafruit_BusIO_Register.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib091/Adafruit BusIO/Adafruit_GenericDevice.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib091/Adafruit BusIO/Adafruit_I2CDevice.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib740/libCrypto.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib740/libCrypto.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib091/Adafruit BusIO/Adafruit_SPIDevice.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib975/RTClib/RTC_DS1307.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib975/RTClib/RTC_DS3231.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib975/RTClib/RTC_Micros.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib091/libAdafruit BusIO.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib091/libAdafruit BusIO.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib975/RTClib/RTC_Millis.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib975/RTClib/RTC_PCF8523.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib975/RTClib/RTC_PCF8563.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib975/RTClib/RTClib.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib5da/Melopero RV3028/Melopero_RV3028.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib616/CayenneLPP/CayenneLPP.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib616/CayenneLPP/CayenneLPPPolyline.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf56/Adafruit_LittleFS/Adafruit_LittleFS.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib5da/libMelopero RV3028.a
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib975/libRTClib.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib5da/libMelopero RV3028.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib975/libRTClib.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf56/Adafruit_LittleFS/Adafruit_LittleFS_File.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf56/Adafruit_LittleFS/littlefs/lfs.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf56/Adafruit_LittleFS/littlefs/lfs_util.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf0a/InternalFileSytem/InternalFileSystem.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf0a/InternalFileSytem/flash/flash_cache.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libf0a/InternalFileSytem/flash/flash_nrf5x.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libe18/CustomLFS/CustomLFS.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libf0a/libInternalFileSytem.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libf0a/libInternalFileSytem.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libe18/CustomLFS/CustomLFS_QSPIFlash.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libe18/CustomLFS/CustomLFS_SPIFlash.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libf56/libAdafruit_LittleFS.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libf56/libAdafruit_LittleFS.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib9aa/Adafruit INA3221 Library/Adafruit_INA3221.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libac8/Adafruit INA219/Adafruit_INA219.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libe18/libCustomLFS.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libe18/libCustomLFS.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib26e/INA226/INA226.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib9aa/libAdafruit INA3221 Library.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib9aa/libAdafruit INA3221 Library.a
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib616/libCayenneLPP.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib616/libCayenneLPP.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib36c/Adafruit INA260 Library/Adafruit_INA260.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libca4/Adafruit Unified Sensor/Adafruit_Sensor.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib26e/libINA226.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib26e/libINA226.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib4af/Adafruit AHTX0/Adafruit_AHTX0.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libac8/libAdafruit INA219.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libac8/libAdafruit INA219.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libc99/Adafruit BME280 Library/Adafruit_BME280.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libca4/libAdafruit Unified Sensor.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libca4/libAdafruit Unified Sensor.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib314/Adafruit BMP280 Library/Adafruit_BMP280.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib36c/libAdafruit INA260 Library.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib36c/libAdafruit INA260 Library.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libcc1/Adafruit SHTC3 Library/Adafruit_SHTC3.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib4af/libAdafruit AHTX0.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib4af/libAdafruit AHTX0.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib8d7/Sensirion Core/SensirionCrc.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libc99/libAdafruit BME280 Library.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libc99/libAdafruit BME280 Library.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib8d7/Sensirion Core/SensirionErrors.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib8d7/Sensirion Core/SensirionI2CCommunication.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libcc1/libAdafruit SHTC3 Library.a
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib314/libAdafruit BMP280 Library.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libcc1/libAdafruit SHTC3 Library.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib314/libAdafruit BMP280 Library.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib8d7/Sensirion Core/SensirionI2CTxFrame.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib8d7/Sensirion Core/SensirionRxFrame.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib8d7/Sensirion Core/SensirionShdlcCommunication.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib8d7/Sensirion Core/SensirionShdlcTxFrame.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libcbd/Sensirion I2C SHT4x/SensirionI2cSht4x.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/liba2a/Arduino_LPS22HB/BARO.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib5ef/Adafruit MLX90614 Library/Adafruit_MLX90614.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib8d7/libSensirion Core.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib8d7/libSensirion Core.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib434/Adafruit_VL53L0X/Adafruit_VL53L0X.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libcbd/libSensirion I2C SHT4x.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libcbd/libSensirion I2C SHT4x.a
+Archiving .pio/build/RAK_4631_repeater_power_monitor/liba2a/libArduino_LPS22HB.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/liba2a/libArduino_LPS22HB.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib434/Adafruit_VL53L0X/core/src/vl53l0x_api.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib434/Adafruit_VL53L0X/core/src/vl53l0x_api_calibration.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib5ef/libAdafruit MLX90614 Library.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib5ef/libAdafruit MLX90614 Library.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib434/Adafruit_VL53L0X/core/src/vl53l0x_api_core.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib434/Adafruit_VL53L0X/core/src/vl53l0x_api_ranging.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib434/Adafruit_VL53L0X/core/src/vl53l0x_api_strings.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib434/Adafruit_VL53L0X/platform/src/vl53l0x_i2c_comms.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib434/Adafruit_VL53L0X/platform/src/vl53l0x_platform.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libd43/MicroNMEA/MicroNMEA.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libcec/Adafruit BME680 Library/Adafruit_BME680.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libcec/Adafruit BME680 Library/bme68x.c.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib434/libAdafruit_VL53L0X.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib434/libAdafruit_VL53L0X.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/libbb5/Adafruit BMP085 Library/Adafruit_BMP085.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libd43/libMicroNMEA.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libd43/libMicroNMEA.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib177/Adafruit GFX Library/Adafruit_GFX.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib177/Adafruit GFX Library/Adafruit_GrayOLED.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libcec/libAdafruit BME680 Library.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libcec/libAdafruit BME680 Library.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib177/Adafruit GFX Library/Adafruit_SPITFT.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libbb5/libAdafruit BMP085 Library.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libbb5/libAdafruit BMP085 Library.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib177/Adafruit GFX Library/glcdfont.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib8a2/Adafruit SSD1306/Adafruit_SSD1306.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29b/SparkFun u-blox GNSS Arduino Library/SparkFun_u-blox_GNSS_Arduino_Library.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib67c/BSEC Software Library/bme68x/bme68x.c.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib8a2/libAdafruit SSD1306.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib8a2/libAdafruit SSD1306.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib67c/BSEC Software Library/bsec.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib7c6/Adafruit_nRFCrypto/Adafruit_nRFCrypto.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib7c6/Adafruit_nRFCrypto/ecc/nRFCrypto_ECC.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib177/libAdafruit GFX Library.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib177/libAdafruit GFX Library.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib7c6/Adafruit_nRFCrypto/ecc/nRFCrypto_ECC_PrivateKey.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib67c/libBSEC Software Library.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib67c/libBSEC Software Library.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib7c6/Adafruit_nRFCrypto/ecc/nRFCrypto_ECC_PublicKey.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib7c6/Adafruit_nRFCrypto/nRFCrypto_Hash.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib7c6/Adafruit_nRFCrypto/nRFCrypto_Hmac.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib7c6/Adafruit_nRFCrypto/nRFCrypto_Random.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib6fb/ed25519/add_scalar.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib6fb/ed25519/fe.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib6fb/ed25519/ge.c.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib7c6/libAdafruit_nRFCrypto.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib7c6/libAdafruit_nRFCrypto.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib6fb/ed25519/key_exchange.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib6fb/ed25519/keypair.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib6fb/ed25519/sc.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib6fb/ed25519/seed.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib6fb/ed25519/sha512.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib6fb/ed25519/sign.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib6fb/ed25519/verify.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/BLEAdvertising.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/BLECentral.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib6fb/libed25519.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib6fb/libed25519.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/BLECharacteristic.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/BLEClientCharacteristic.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/BLEClientService.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/BLEConnection.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/BLEDiscovery.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/BLEGatt.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/BLEPeriph.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/BLEScanner.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/BLESecurity.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/BLEService.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/BLEUuid.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/bluefruit.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/clients/BLEAncs.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/clients/BLEClientBas.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/clients/BLEClientCts.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/clients/BLEClientDis.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/clients/BLEClientHidAdafruit.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/clients/BLEClientIas.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/clients/BLEClientUart.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/services/BLEBas.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/services/BLEBeacon.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/services/BLEDfu.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/services/BLEDis.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/services/BLEHidAdafruit.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/services/BLEHidGamepad.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/services/BLEHidGeneric.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/services/BLEIas.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/services/BLEMidi.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/services/BLEUart.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/services/EddyStone.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/utility/AdaMsg.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib29b/libSparkFun u-blox GNSS Arduino Library.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib29b/libSparkFun u-blox GNSS Arduino Library.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/utility/bonding.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/lib29d/Bluefruit52Lib/utility/bootloader_util.c.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libFrameworkArduinoVariant.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libFrameworkArduinoVariant.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/HardwarePWM.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/IPAddress.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/Print.cpp.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/lib29d/libBluefruit52Lib.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/lib29d/libBluefruit52Lib.a
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/RingBuffer.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/Stream.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/Tone.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/Uart.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/WInterrupts.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/WMath.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/WString.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/abi.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/avr/dtostrf.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/delay.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/freertos/Source/croutine.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/freertos/Source/event_groups.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/freertos/Source/list.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/freertos/Source/portable/MemMang/heap_3.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/freertos/Source/queue.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/freertos/Source/stream_buffer.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/freertos/Source/tasks.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/freertos/Source/timers.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/freertos/portable/CMSIS/nrf52/port_cmsis.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/freertos/portable/CMSIS/nrf52/port_cmsis_systick.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/freertos/portable/GCC/nrf52/port.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/hooks.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/itoa.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/linker/gcc_startup_nrf52.S.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/linker/gcc_startup_nrf52833.S.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/linker/gcc_startup_nrf52840.S.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/main.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/new.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/nordic/nrfx/drivers/src/nrfx_gpiote.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/nordic/nrfx/drivers/src/nrfx_power.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/nordic/nrfx/drivers/src/nrfx_pwm.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/nordic/nrfx/drivers/src/nrfx_qspi.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/nordic/nrfx/drivers/src/nrfx_spim.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/nordic/nrfx/drivers/src/nrfx_spis.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/nordic/nrfx/drivers/src/nrfx_temp.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/nordic/nrfx/drivers/src/nrfx_timer.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/nordic/nrfx/mdk/system_nrf52.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/nordic/nrfx/mdk/system_nrf52833.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/nordic/nrfx/mdk/system_nrf52840.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/pulse.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/pulse_asm.S.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/rtos.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/sysview/Config/SEGGER_SYSVIEW_Config_FreeRTOS.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/sysview/SEGGER/SEGGER_RTT.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/sysview/SEGGER/SEGGER_RTT_ASM_ARMv7M.S.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/sysview/SEGGER/SEGGER_RTT_printf.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/sysview/SEGGER/SEGGER_SYSVIEW.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/sysview/SEGGER_SYSVIEW_FreeRTOS.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/utility/AdaCallback.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/utility/SoftwareTimer.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/utility/adafruit_fifo.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/utility/debug.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/utility/utilities.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/wiring.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/wiring_analog.cpp.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/wiring_analog_nRF52.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/wiring_digital.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/wiring_private.c.o
+Compiling .pio/build/RAK_4631_repeater_power_monitor/FrameworkArduino/wiring_shift.c.o
+Archiving .pio/build/RAK_4631_repeater_power_monitor/libFrameworkArduino.a
+Indexing .pio/build/RAK_4631_repeater_power_monitor/libFrameworkArduino.a
+Linking .pio/build/RAK_4631_repeater_power_monitor/firmware.elf
+Building .pio/build/RAK_4631_repeater_power_monitor/firmware.hex
+Checking size .pio/build/RAK_4631_repeater_power_monitor/firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [==        ]  17.8% (used 41808 bytes from 235520 bytes)
+Flash: [=====     ]  51.5% (used 366768 bytes from 712704 bytes)
+Building .pio/build/RAK_4631_repeater_power_monitor/firmware.zip
+Zip created at .pio/build/RAK_4631_repeater_power_monitor/firmware.zip
+========================= [SUCCESS] Took 97.08 seconds =========================
+
+Environment                      Status    Duration
+-------------------------------  --------  ------------
+RAK_4631_repeater_power_monitor  SUCCESS   00:01:37.083
+========================= 1 succeeded in 00:01:37.083 =========================
+Converted to uf2, output size: 733696, start address: 0x26000
+Wrote 733696 bytes to /home/pi/Meshcore_PowerMonitor_RAK4630_node/upstream-official/.pio/build/RAK_4631_repeater_power_monitor/firmware.uf2
+PASS: application-only DFU ZIP, matching BIN, CRC16, S140 0x00B6
+{
+  "version": "0.4.0-pi.1",
+  "source_commit": "8c213b910826dfd9b1737556ddd62c6dbc083bf5",
+  "upstream": "81dbae592ffad40b4212bc0b37e82b38da08f4bc",
+  "upstream_url": "https://github.com/meshcore-dev/MeshCore",
+  "upstream_version": "v1.18.0",
+  "target": "RAK_4631_repeater_power_monitor",
+  "profile": "official",
+  "lora_ota": false,
+  "ota_storage": null,
+  "ota_transport": null,
+  "application_start": "0x26000",
+  "application_limit": "0xD4000",
+  "dfu": {
+    "format": "Nordic/Adafruit legacy DFU 0.5",
+    "application_only": true,
+    "softdevice_req": "0x00B6"
+  },
+  "built_utc": "2026-10-30T09:51:05.816196+00:00",
+  "firmware": {
+    "RAK4631_official_no_lora_ota_PM_v0.4.0-pi.1.uf2": {
+      "bytes": 733696,
+      "sha256": "d6fd8ab486180aeddd154ed9d29f6e1febf88f1dc50c715e050e0b5b062fac5d"
+    },
+    "RAK4631_official_no_lora_ota_PM_v0.4.0-pi.1.hex": {
+      "bytes": 1031684,
+      "sha256": "298e50ebe6469de9ff4731392c7ea4984f008a13b253936076db3b2e28061635"
+    },
+    "RAK4631_official_no_lora_ota_PM_v0.4.0-pi.1.bin": {
+      "bytes": 366768,
+      "sha256": "a166da8c56568eb3ac711904e70f10f11abee7862e47d0c978b79c9e66686ae9"
+    },
+    "RAK4631_official_no_lora_ota_PM_v0.4.0-pi.1.zip": {
+      "bytes": 367571,
+      "sha256": "0b18c811d70827395db77087cc92abacb77ac16dfb403cc6c6baf52776ddebcb"
+    }
+  }
+}
+Compiled version 0.4.0-pi.1. Artifacts: /home/pi/Meshcore_PowerMonitor_RAK4630_node/output
