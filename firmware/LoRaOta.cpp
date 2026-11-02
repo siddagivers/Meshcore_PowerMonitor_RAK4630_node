@@ -81,7 +81,14 @@ const BootInfo& bootInfo() {
   static BootInfo info;
   if(!info.ready) {
     info.caps=ota_bootloader_app_caps();info.sd=*(const volatile uint16_t*)(uintptr_t)0x300C;
-    mesh::Utils::sha256(info.hash,32,(const uint8_t*)(uintptr_t)MOTA_NRF52_BL_START,MOTA_NRF52_BL_END-MOTA_NRF52_BL_START);
+    // Bootloader bytes reside in internal flash. Do not pass that address to
+    // MeshCore's CC310 one-shot helper: its DMA input is not a RAM buffer and
+    // the helper ignores crypto errors, potentially returning a stale digest.
+    // SHA256 is the software implementation, also used by the image verifier.
+    SHA256 bootSha;
+    bootSha.update((const uint8_t*)(uintptr_t)MOTA_NRF52_BL_START,
+                   MOTA_NRF52_BL_END-MOTA_NRF52_BL_START);
+    bootSha.finalize(info.hash,sizeof(info.hash));
     info.handoff=selectOtaBootHandoff(info.caps.present,info.caps.apply_abi,info.caps.codec_mask,info.caps.storage_flags,info.sd,info.hash);
     info.ready=true;
   }
@@ -106,7 +113,10 @@ bool verify(char* reply,size_t cap) {
   MotaManifest m;
   uint8_t hardware[32]={};memcpy(hardware,HW,strlen(HW));
   const char* targetName=OTA_TARGET_NAME;
-  uint8_t target[4];mesh::Utils::sha256(target,4,(const uint8_t*)targetName,strlen(targetName));
+  // The constant target name is in flash as well; use software hashing here.
+  uint8_t target[4];SHA256 targetSha;
+  targetSha.update((const uint8_t*)targetName,strlen(targetName));
+  targetSha.finalize(target,sizeof(target));
   if(!mota_parse_manifest(raw,sizeof(raw),m)||m.is_bootloader()||!m.is_full()||m.codec_id!=CODEC_FULL
     ||!m.is_signed()||m.image_size!=m.payload_size||m.image_size<64||m.image_size>712704
     ||m.target_id!=rd_u32le(target)||memcmp(m.hw_id,hardware,32)||memcmp(raw+MOTA_OFF_APPROVAL,APPROVAL_NOT,4)) {
