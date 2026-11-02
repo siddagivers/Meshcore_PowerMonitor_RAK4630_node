@@ -63,7 +63,9 @@ class Hub:
     def __init__(self,store,port,cron_lock):
         self.store,self.port,self.cron_lock=store,port,cron_lock
         self.mc=None;self.online=False;self.busy=None;self.error='Starting';self.lock=asyncio.Lock();self.radios={}
-    def status(self):return {'online':self.online,'busy':self.busy,'error':self.error,'port':self.port}
+    def status(self):
+        info=getattr(self.mc,'self_info',{}) or {}
+        return {'online':self.online,'busy':self.busy,'error':self.error,'port':self.port,'public_key':info.get('public_key')}
     def contact(self,key):
         values=list(self.mc.contacts.values())
         exact=[c for c in values if c['public_key'].lower()==str(key).lower() or c.get('adv_name')==key]
