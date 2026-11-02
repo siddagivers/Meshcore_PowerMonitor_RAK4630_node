@@ -79,6 +79,16 @@ class WebTest(unittest.TestCase):
         status,result=self.request('/api/prepare',{'firmware':base64.b64encode(binary).decode(),'name':'firmware.bin','manifest':manifest})
         self.assertEqual(status,200);self.assertIsNone(self.state.job);self.assertIsNone(self.state.process)
         self.assertTrue((self.state.packages/(result['sha256']+'.mota')).exists())
+        path='/packages/'+result['sha256']+'.mota'
+        connection=http.client.HTTPConnection('127.0.0.1',self.server.server_port)
+        connection.request('GET',path,headers={'Authorization':'Basic '+base64.b64encode(b'admin:test-only-password').decode()})
+        response=connection.getresponse()
+        self.assertEqual(response.status,200)
+        self.assertEqual(response.getheader('Content-Type'),'application/octet-stream')
+        self.assertIn('attachment;',response.getheader('Content-Disposition'))
+        self.assertEqual(response.read(),(self.state.packages/(result['sha256']+'.mota')).read_bytes())
+        connection.close()
+        self.assertEqual(self.request(path,auth=False)[0],401)
         status,_=self.request('/api/start',{'sha256':result['sha256'],'target':'a'*64,'port':'/dev/unrelated','password':'secret','activate':False})
         self.assertEqual(status,400);self.assertIsNone(self.state.process)
         manifest['firmware']['firmware.bin']['sha256']='0'*64

@@ -150,10 +150,11 @@ class Handler(BaseHTTPRequestHandler):
             return hmac.compare_digest(user,'admin') and hmac.compare_digest(actual,config['hash'])
         except Exception:return False
 
-    def respond(self,status,data,kind='application/json'):
+    def respond(self,status,data,kind='application/json',download=None):
         body=data if isinstance(data,bytes) else json.dumps(data).encode()
         self.send_response(status);self.send_header('Content-Type',kind);self.send_header('Content-Length',str(len(body)))
         self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff')
+        if download:self.send_header('Content-Disposition','attachment; filename="'+download+'"')
         self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'")
         self.end_headers();self.wfile.write(body)
 
@@ -181,7 +182,8 @@ class Handler(BaseHTTPRequestHandler):
                 path=ROOT/'releases/v0.4.2-ota-test.2'/('RAK4631_official_rak15001_lora_ota_PM_v0.4.2-ota-test.2.'+suffix)
                 return self.respond(200,path.read_bytes(),'application/zip' if suffix=='zip' else 'application/json')
             if re.fullmatch(r'/packages/[0-9a-f]{64}\.mota',self.path):
-                return self.respond(200,(state.packages/self.path.rsplit('/',1)[1]).read_bytes(),'application/octet-stream')
+                name=self.path.rsplit('/',1)[1]
+                return self.respond(200,(state.packages/name).read_bytes(),'application/octet-stream',download='power-monitor-'+name[:8]+'.mota')
             self.respond(404,{'error':'Not found'})
         except Exception:self.respond(400,{'error':'Unable to read requested resource'})
 
