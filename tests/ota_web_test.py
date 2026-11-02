@@ -19,6 +19,11 @@ import ota_web
 import lora_ota
 
 class WebTest(unittest.TestCase):
+    def test_invalid_packet_delays_do_not_start_transfer(self):
+        for pace in (0,-1,31,True,'5',None,float('inf'),float('nan')):
+            self.assertEqual(self.request('/api/start',{'pace':pace})[0],400)
+            self.assertIsNone(self.state.job)
+
     def test_elapsed_eta_resumed_upload_and_activation_command(self):
         job={'started':100,'progress_started':110,'resume_offset':20000,'sent':21000,'total':30000,'status':'running','sha256':'844497f0'+'a'*56}
         status=ota_web.transfer_timing(job,now=130)
@@ -112,18 +117,18 @@ class WebTest(unittest.TestCase):
         key=serialization.load_pem_private_key((self.state.directory/'signing.pem').read_bytes(),None)
         info=self.state.store(lora_ota.pack_image(bytes(binary),0x40000,key))
         with patch.object(self.state,'ports',return_value=['/dev/test-companion']),patch('threading.Thread.start'):
-            self.state.start({'sha256':info['sha256'],'target':'b'*64,'port':'/dev/test-companion','password':'private-test-value','activate':False})
-        self.assertNotIn('private-test-value',json.dumps(self.state.job));self.assertFalse(self.state.job['activate'])
+            self.state.start({'sha256':info['sha256'],'target':'b'*64,'port':'/dev/test-companion','password':'private-test-value','activate':False,'pace':5})
+        self.assertNotIn('private-test-value',json.dumps(self.state.job));self.assertFalse(self.state.job['activate']);self.assertEqual(self.state.job['pace'],5)
         class Pipe(io.StringIO):
             def close(self):pass
         class Process:
             stdin=Pipe();stdout=iter(['private-test-value\n','PM_PROGRESS 40 5000\n'])
             def wait(self):return 0
         with patch('subprocess.Popen',return_value=Process()) as spawned:
-            self.state.worker(self.state.packages/(info['sha256']+'.mota'),'b'*64,'/dev/test-companion','private-test-value',False)
+            self.state.worker(self.state.packages/(info['sha256']+'.mota'),'b'*64,'/dev/test-companion','private-test-value',False,5)
         self.assertNotIn('private-test-value',json.dumps(self.state.job))
         self.assertNotIn('private-test-value',' '.join(spawned.call_args.args[0]))
-        self.assertNotIn('--apply',spawned.call_args.args[0]);self.assertEqual(self.state.job['sent'],40)
+        self.assertEqual(spawned.call_args.args[0][-2:],['--pace','5']);self.assertNotIn('--apply',spawned.call_args.args[0]);self.assertEqual(self.state.job['sent'],40)
     def test_dfu_zip_can_be_renamed_and_old_profile_rejected(self):
         self.state.create_key();binary=bytearray(b'\x55'*5000);struct.pack_into('<II',binary,0,0x2003f000,0x26021)
         import binascii

@@ -105,6 +105,8 @@ class State:
 
     def start(self,request):
         digest=request.get('sha256','');target=request.get('target','');port=request.get('port','');password=request.get('password','')
+        pace=request.get('pace',2)
+        if type(pace) not in (int,float) or not 1<=pace<=30:raise ValueError('Select a packet delay between 1 and 30 seconds')
         if not re.fullmatch('[0-9a-f]{64}',digest) or not re.fullmatch('[0-9a-fA-F]{64}',target):raise ValueError('Exact package hash and target public key are required')
         if port not in self.ports():raise ValueError('Select a listed companion serial port')
         if not isinstance(password,str) or not 1<=len(password)<=128 or any(c in password for c in '\r\n\0'):raise ValueError('Enter the repeater admin password')
@@ -113,12 +115,12 @@ class State:
         if type(activate) is not bool:raise ValueError('Invalid activation choice')
         with self.lock:
             if self.process is not None or (self.job and self.job['status'] in ('running','starting','stopping')):raise ValueError('An upload is already running')
-            self.job={'status':'starting','target':target,'port':port,'activate':activate,'sha256':digest,'sent':0,'total':metadata['bytes'],'logs':[],'started':time.time()}
-            threading.Thread(target=self.worker,args=(path,target,port,password,activate),daemon=True).start()
+            self.job={'status':'starting','target':target,'port':port,'activate':activate,'pace':pace,'sha256':digest,'sent':0,'total':metadata['bytes'],'logs':[],'started':time.time()}
+            threading.Thread(target=self.worker,args=(path,target,port,password,activate,pace),daemon=True).start()
         return {'started':True}
 
-    def worker(self,path,target,port,password,activate):
-        command=[sys.executable,'-u',str(ROOT/'scripts/lora_ota.py'),'upload',str(path),'--port',port,'--target',target,'--password-stdin','--progress']
+    def worker(self,path,target,port,password,activate,pace=2):
+        command=[sys.executable,'-u',str(ROOT/'scripts/lora_ota.py'),'upload',str(path),'--port',port,'--target',target,'--password-stdin','--progress','--pace',str(pace)]
         if activate:command.append('--apply')
         process=None
         try:
