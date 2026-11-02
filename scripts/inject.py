@@ -98,7 +98,8 @@ def main():
     # Generated for every build. Both source revision and numeric version are
     # accessible via local MeshCore USB CLI: pm version.
     header=main_file.parent/"PowerMonitorBuild.h"
-    marker="OTA update done - TEST2" if "-ota-test." in args.version else "BASELINE firmware - OTA test not installed"
+    test=re.search(r'-ota-test\.(\d+)$',args.version)
+    marker="OTA update done - TEST"+test.group(1) if test else "BASELINE firmware - OTA test not installed"
     header.write_text('#pragma once\n#define PM_VERSION "'+args.version+'"\n#define PM_SOURCE_SHA "'+args.source_sha[:12]+'"\n#define PM_UPDATE_MARKER "'+marker+'"\n')
     cpp=main_file.parent/"PowerMonitor.cpp"
     cpp.write_text('#include "PowerMonitorBuild.h"\n'+cpp.read_text())
