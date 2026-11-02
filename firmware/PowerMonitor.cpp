@@ -177,10 +177,13 @@ void PowerMonitor::clear() {
 }
 bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
   if(!strcmp(c,"help")||!strcmp(c,"help pm")) {
-    snprintf(out,cap,"PowerMonitor: pm help; pm ota help; pm ota boot; ota test (running build marker); pm version. Sensor/energy commands: pm help");return true;
+    snprintf(out,cap,"PowerMonitor: pm help; pm diag; pm ota help; pm ota boot; ota test (running build marker); pm version. Sensor/energy commands: pm help");return true;
   }
   if(strncmp(c,"pm",2)!=0 || (c[2]&&c[2]!=' '))return false;
   if(!strcmp(c,"pm")||!strcmp(c,"pm status"))summary(out,cap);
+  else if(!strcmp(c,"pm diag"))
+    snprintf(out,cap,"I2C timeouts=%lu last=%s wait_bound=50ms; uptime=%lus",
+      (unsigned long)pmWireTimeoutCount(),pmWireLastTimeoutStage(),(unsigned long)(millis()/1000));
   else if(!strcmp(c,"pm sensors"))
     snprintf(out,cap,"solar40:%s load41:%s mcp18:%s T=%.2fC errs=%lu/%lu cov=%u/%u%%",
       solar_.detected?"OK":"MISSING",load_.detected?"OK":"MISSING",
@@ -222,7 +225,7 @@ bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
   else if(!strcmp(c,"pm info"))
     snprintf(out,cap,"v=%s 20ms solar=0x40 load=0x41 MCP=0x18 R=%.3f/%.3f",
       PM_VERSION,(double)solar_.shunt_ohms,(double)load_.shunt_ohms);
-  else snprintf(out,cap,"pm channels|solar|load|temp|i2c|sensors|version|status|day; solar 15m|1h|today|yesterday; pm ota help; ota test; reset YES (USB only)");
+  else snprintf(out,cap,"pm diag|channels|solar|load|temp|i2c|sensors|version|status|day; solar 15m|1h|today|yesterday; pm ota help; ota test; reset YES (USB only)");
   return true;
 }
 bool PowerMonitor::restore() {

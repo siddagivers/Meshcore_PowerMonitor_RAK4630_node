@@ -22,6 +22,8 @@ def main():
         if not re.fullmatch(r"[a-zA-Z0-9.+_-]{1,64}",value):
             raise SystemExit(f"Invalid {label}")
     root=Path(__file__).resolve().parent.parent
+    (args.upstream/'scripts').mkdir(exist_ok=True)
+    shutil.copy2(root/'scripts/pm_bounded_wire.py',args.upstream/'scripts/pm_bounded_wire.py')
     main_file=args.upstream/"examples/simple_repeater/main.cpp"
     text=main_file.read_text()
     text=replace_one(text,'#include "MyMesh.h"',
@@ -81,7 +83,7 @@ def main():
 '''
     mesh_text=replace_one(mesh_text,anchor,hook+anchor,"on-demand admin diagnostics")
     mesh_file.write_text(mesh_text)
-    for file in ("PowerMonitor.h","PowerMonitor.cpp","EnergyIntegrator.h","SolarHistory.h","PowerTelemetry.h","SensorDecoders.h"):
+    for file in ("PowerMonitor.h","PowerMonitor.cpp","EnergyIntegrator.h","SolarHistory.h","PowerTelemetry.h","SensorDecoders.h","BoundedWireWait.h"):
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
     for file in ("LoRaOta.h","LoRaOta.cpp","OtaTransfer.h","OtaBootProfile.h"):
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
@@ -111,6 +113,7 @@ def main():
         "platform = nordicnrf52@11.0.0\n"
         "board_build.ldscript = boards/nrf52840_s140_v6_extrafs.ld\n"
         "board_upload.maximum_size = 712704\n"
+        "extra_scripts = pre:scripts/pm_bounded_wire.py\n"
         "build_unflags = -Ofast\n"
         "  -D ENV_INCLUDE_INA260=1\n"
         "  -D ENV_INCLUDE_INA219=1\n"
