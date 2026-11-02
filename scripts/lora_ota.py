@@ -113,6 +113,17 @@ class Radio:
             finally:sub.unsubscribe()
 
 async def upload(args):
+    # When the configured broker is available, all requests share its single
+    # serial reader and wait for telemetry rather than opening a second port.
+    from companion_rpc import SOCKET,call
+    if SOCKET.exists():
+        status=await call({'op':'status'},timeout=5)
+        if status.get('online') and __import__('os').path.realpath(status['port'])==__import__('os').path.realpath(args.port):
+            from ota_gateway import upload as gateway_upload
+            blob=args.image.read_bytes()
+            return await gateway_upload(args,blob,inspect_package(blob))
+        if status.get('online'):raise RuntimeError('Selected serial port differs from the shared companion')
+        raise RuntimeError(status.get('error') or 'Shared companion is not ready; wait and retry')
     from meshcore import MeshCore,EventType
     blob=args.image.read_bytes();metadata=inspect_package(blob)
     tag=metadata["sha256"][:8]

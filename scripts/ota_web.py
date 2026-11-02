@@ -193,7 +193,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200,(ROOT/'web'/name).read_bytes(),kind)
             if self.path=='/api/status':
                 with state.lock:job=transfer_timing(json.loads(json.dumps(state.job)))
-                return self.respond(200,{'ports':state.ports(),'signer':state.key_info(),'job':job})
+                companion=None
+                try:
+                    from companion_rpc import SOCKET,call_sync
+                    if SOCKET.exists():companion=call_sync({'op':'status'},timeout=2)
+                except Exception:pass
+                return self.respond(200,{'ports':state.ports(),'signer':state.key_info(),'job':job,'companion':companion})
             if self.path=='/downloads/receiver.zip':
                 return self.respond(200,(ROOT/'releases/v0.4.2-bootstrap.2/RAK4631_official_rak15001_lora_ota_PM_v0.4.2-bootstrap.2.zip').read_bytes(),'application/zip')
             if self.path=='/downloads/receiver.json':

@@ -1,0 +1,16 @@
+[Unit]
+Description=MeshCore inbox and shared companion gateway
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/Meshcore_PowerMonitor_RAK4630_node
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/pi/Meshcore_PowerMonitor_RAK4630_node/.venv/bin/python scripts/meshcore_inbox.py --directory /home/pi/.local/share/meshcore-inbox --auth /home/pi/.config/power-monitor-web/auth.json --cert /home/pi/.config/power-monitor-web/cert.pem --key /home/pi/.config/power-monitor-web/tls-key.pem --serial /dev/serial/by-id/usb-RAKwireless_WisCore_RAK4631_Board_D47C8FBE44FBFCE9-if00 --port 8444
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

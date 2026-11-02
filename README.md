@@ -216,3 +216,7 @@ The official-source port compiled on a Raspberry Pi 5 running aarch64 Linux, usi
 * [Texas Instruments INA219](https://www.ti.com/product/INA219)
 * [RAK16000 module](https://docs.rakwireless.com/product-categories/wisblock/rak16000/)
 * [Official MeshCore RAK4631 configuration](https://github.com/meshcore-dev/MeshCore/blob/81dbae592ffad40b4212bc0b37e82b38da08f4bc/variants/rak4631/platformio.ini)
+
+## Companion inbox on the Raspberry Pi
+
+The authenticated inbox at `https://192.168.1.16:8444/` receives private/channel messages and telemetry, saves history on the Pi, and supports chat, contact import/add/remove and unread counts. It shares the companion with the existing SIPRUN collector and OTA through a single serial owner. See [setup, collector compatibility and operation](docs/COMPANION_INBOX.md). Message acceptance by the companion is distinguished from delivery acknowledgments. No automatic chat messages are sent.
