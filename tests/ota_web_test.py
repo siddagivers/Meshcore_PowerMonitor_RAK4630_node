@@ -19,6 +19,19 @@ import ota_web
 import lora_ota
 
 class WebTest(unittest.TestCase):
+    def test_elapsed_eta_resumed_upload_and_activation_command(self):
+        job={'started':100,'progress_started':110,'resume_offset':20000,'sent':21000,'total':30000,'status':'running','sha256':'844497f0'+'a'*56}
+        status=ota_web.transfer_timing(job,now=130)
+        self.assertEqual(status['elapsed_seconds'],30)
+        self.assertEqual(status['eta_seconds'],180)
+        self.assertEqual(status['activation_command'],'pm ota apply 844497f0')
+        self.assertNotIn('elapsed_seconds',job)
+        self.assertIsNone(ota_web.transfer_timing(job,now=115)['eta_seconds'])
+        stopped=dict(job,status='failed',finished=140)
+        status=ota_web.transfer_timing(stopped,now=999)
+        self.assertEqual(status['elapsed_seconds'],40)
+        self.assertIsNone(status['eta_seconds'])
+
     def test_incomplete_tls_does_not_block_other_visitors(self):
         from cryptography import x509
         from cryptography.hazmat.primitives import hashes,serialization

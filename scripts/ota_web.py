@@ -23,6 +23,19 @@ import lora_ota
 ROOT=Path(__file__).resolve().parents[1]
 MAX_REQUEST=1_600_000
 
+def transfer_timing(job,now=None):
+    if not job:return None
+    job=dict(job);now=time.time() if now is None else now
+    end=job.get('finished',now)
+    job['elapsed_seconds']=max(0,end-job['started'])
+    job['eta_seconds']=None
+    measured=end-job.get('progress_started',end)
+    moved=job['sent']-job.get('resume_offset',job['sent'])
+    if job['status'] in ('starting','running') and measured>=10 and moved>0:
+        job['eta_seconds']=max(0,job['total']-job['sent'])*measured/moved
+    job['activation_command']='pm ota apply '+job['sha256'][:8]
+    return job
+
 class State:
     def __init__(self,directory,auth):
         self.directory=Path(directory);self.directory.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -100,7 +113,7 @@ class State:
         if type(activate) is not bool:raise ValueError('Invalid activation choice')
         with self.lock:
             if self.process is not None or (self.job and self.job['status'] in ('running','starting','stopping')):raise ValueError('An upload is already running')
-            self.job={'status':'starting','target':target,'port':port,'activate':activate,'sent':0,'total':metadata['bytes'],'logs':[],'started':time.time()}
+            self.job={'status':'starting','target':target,'port':port,'activate':activate,'sha256':digest,'sent':0,'total':metadata['bytes'],'logs':[],'started':time.time()}
             threading.Thread(target=self.worker,args=(path,target,port,password,activate),daemon=True).start()
         return {'started':True}
 
@@ -118,7 +131,10 @@ class State:
                 line=line.rstrip().replace(password,'[redacted]')
                 with self.lock:
                     match=re.fullmatch(r'PM_PROGRESS (\d+) (\d+)',line)
-                    if match:self.job['sent']=int(match[1]);self.job['total']=int(match[2])
+                    if match:
+                        if 'progress_started' not in self.job:
+                            self.job['progress_started']=time.time();self.job['resume_offset']=int(match[1])
+                        self.job['sent']=int(match[1]);self.job['total']=int(match[2])
                     else:self.job['logs']=(self.job['logs']+[line])[-300:]
             result=process.wait()
             with self.lock:self.job['status']='stopped' if self.job['status']=='stopping' else ('complete' if result==0 else 'failed')
@@ -127,6 +143,7 @@ class State:
         finally:
             password=None
             with self.lock:
+                self.job['finished']=time.time()
                 if self.process is process:self.process=None
 
     def stop(self):
@@ -171,7 +188,7 @@ class Handler(BaseHTTPRequestHandler):
                 kind={'/':'text/html; charset=utf-8','/app.js':'application/javascript','/style.css':'text/css'}[self.path]
                 return self.respond(200,(ROOT/'web'/name).read_bytes(),kind)
             if self.path=='/api/status':
-                with state.lock:job=json.loads(json.dumps(state.job))
+                with state.lock:job=transfer_timing(json.loads(json.dumps(state.job)))
                 return self.respond(200,{'ports':state.ports(),'signer':state.key_info(),'job':job})
             if self.path=='/downloads/receiver.zip':
                 return self.respond(200,(ROOT/'releases/v0.4.2-bootstrap.2/RAK4631_official_rak15001_lora_ota_PM_v0.4.2-bootstrap.2.zip').read_bytes(),'application/zip')

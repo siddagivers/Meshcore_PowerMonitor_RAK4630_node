@@ -119,6 +119,7 @@ async def upload(args):
         if not match:raise RuntimeError(reply)
         offset=int(match[1])
         if not 0<=offset<=len(blob):raise RuntimeError("invalid remote resume offset")
+        if getattr(args,"progress",False):print(f"PM_PROGRESS {offset} {len(blob)}",flush=True)
         while offset<len(blob):
             data=blob[offset:offset+40]
             response=await radio.request(f"pm ota data {tag} {offset} {data.hex()}")

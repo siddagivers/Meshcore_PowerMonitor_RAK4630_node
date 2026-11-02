@@ -14,5 +14,9 @@ function page(saved){
  const restored=page(metadata);assert.equal(restored.nodes.package.hidden,false);
  assert.equal(restored.nodes['package-download'].href,'/packages/'+metadata.sha256+'.mota');
  assert.match(restored.nodes['transfer-notice'].textContent,/Package prepared/);
- console.log('PASS: visible missing-package error; refresh restores package without starting a transfer');
+ vm.runInContext('showTransferDetails('+JSON.stringify({status:'running',sent:21000,total:30000,elapsed_seconds:30,eta_seconds:180,sha256:'844497f0'+'a'.repeat(56)})+')',restored.sandbox);
+ assert.match(restored.nodes['transfer-timing'].textContent,/30s/);
+ assert.match(restored.nodes['transfer-timing'].textContent,/3m 0s/);
+ assert.equal(restored.nodes['activation-command'].textContent,'pm ota apply 844497f0');
+ console.log('PASS: visible errors, refresh restores package, elapsed/ETA and exact activation command');
 })();
