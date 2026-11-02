@@ -19,3 +19,13 @@ The broker waits for existing serial readers and the collector lock before openi
 On serial failure the inbox reconnects; cached messages and contacts remain visible. Messages arriving while disconnected may be lost if the companion queue overflows; continuous receipt is not guaranteed through outages or old direct-serial OTA sessions. An interrupted OTA remains staged and can resume with the same signed package. A changed collector contact name or removed contact can break the existing poll, so contact removal requires confirmation.
 
 Manual contacts can be added by full public key, name and type, or by exported `meshcore://` card. The page shows existing configured channels; it does not expose or edit their secret keys. No end-to-end radio delivery is claimed by host-only tests.
+
+## Private-message inbox and Telegram forwarding
+
+The inbox view shows only incoming `contact_message` records (normal private text addressed to this companion), regardless of whether they arrived directly or via repeaters. Channel traffic, telemetry, acknowledgments and outgoing messages are hidden and do not count as unread. Existing underlying event history and telemetry collection are unchanged.
+
+`meshcore-telegram.service` independently reads the inbox SQLite database; it does not open the serial port or interfere with OTA/telemetry. It forwards new incoming private text to the destination already configured for `/home/pi/tools/telegram.sh/telegram`. The notification includes the sender label/prefix and message text. No Markdown/HTML option is enabled, the text is passed on stdin, and helper output is not logged. Bot credentials stay in the existing Telegram helper configuration.
+
+A separate owner-only `/home/pi/.local/share/meshcore-inbox/telegram.sqlite3` stores a durable cursor and outbox. First activation starts at the current event ID, so old messages are not replayed. Each new qualifying event is queued once. Successful deliveries are not repeated after restart. Failed helper calls retry up to five times with backoff (up to 15 minutes). An ambiguous transport failure can still produce a duplicate if Telegram accepted the message before the helper timed out. Failed records remain available for diagnosis. Restarting this forwarding service does not restart the companion or stop firmware transfers.
+
+Use `systemctl --user status meshcore-telegram.service` to check it, or `systemctl --user stop meshcore-telegram.service` to disable forwarding temporarily. Unit tests use a mocked sender; the configuration dry run sends no notification. A real incoming private message is needed to verify end-to-end Telegram delivery.

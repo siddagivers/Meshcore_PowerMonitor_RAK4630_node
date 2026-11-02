@@ -1,0 +1,16 @@
+[Unit]
+Description=Forward incoming MeshCore private messages to existing Telegram destination
+After=meshcore-inbox.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/pi/Meshcore_PowerMonitor_RAK4630_node/.venv/bin/python /home/pi/Meshcore_PowerMonitor_RAK4630_node/scripts/meshcore_telegram.py --inbox /home/pi/.local/share/meshcore-inbox/inbox.sqlite3 --state /home/pi/.local/share/meshcore-inbox/telegram.sqlite3
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

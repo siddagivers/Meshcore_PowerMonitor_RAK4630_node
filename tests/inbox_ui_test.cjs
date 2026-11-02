@@ -12,6 +12,9 @@ assert.equal(nodes.messages.children[0].children[1].textContent,'<script>unsafe<
 assert.match(nodes.unread.textContent,/1 unread/);
 vm.runInContext('events.push({id:2,kind:"telemetry_response",direction:"in",peer:"aa",received:2,text:"",payload:{lpp:[]}});showEvents();',sandbox);
 assert.equal(nodes.messages.children.length,1,'Telemetry must not appear in the chat inbox');
+vm.runInContext('events.push({id:3,kind:"channel_message",direction:"in",peer:"0",received:3,text:"Group",payload:{}},{id:4,kind:"acknowledgement",direction:"in",received:4,payload:{}},{id:5,kind:"private",direction:"out",peer:"aa",received:5,text:"Sent",payload:{}});showEvents();',sandbox);
+assert.equal(nodes.messages.children.length,1,'Only incoming private messages belong in the inbox');
+assert.match(nodes.unread.textContent,/1 unread/);
 vm.runInContext("lastId=1",sandbox);nodes.read.onclick();assert.equal(nodes.unread.textContent,'');
 assert.equal(requests.length,1,'Loading and rendering must never send a message');
 console.log('PASS: contact/channel selection, unread state, literal message rendering; no automatic sends');
