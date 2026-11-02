@@ -19,6 +19,37 @@ import ota_web
 import lora_ota
 
 class WebTest(unittest.TestCase):
+    def test_auto_resume_same_package_after_network_failure(self):
+        self.state.job={'status':'starting','started':100,'logs':[],'sha256':'a'*64}
+        calls=[]
+        def attempt(*args):
+            calls.append(args)
+            self.state.job.update(status='failed' if len(calls)==1 else 'complete',retryable=True,finished=120)
+        with patch.object(self.state,'_attempt',side_effect=attempt),patch.object(self.state.stop_event,'wait',return_value=False) as wait:
+            self.state.worker(Path('/same-package'),'b'*64,'/port','test-only-password',False,3,True,7)
+        self.assertEqual(len(calls),2);self.assertEqual(calls[0],calls[1])
+        wait.assert_called_once_with(420)
+        self.assertEqual(self.state.job['status'],'complete');self.assertEqual(self.state.job['attempt'],2)
+        self.assertNotIn('test-only-password',json.dumps(self.state.job))
+    def test_auto_resume_stop_and_fatal_failure(self):
+        self.state.job={'status':'starting','started':100,'logs':[],'sha256':'a'*64}
+        def fatal(*args):self.state.job.update(status='failed',retryable=False)
+        with patch.object(self.state,'_attempt',side_effect=fatal) as attempt,patch.object(self.state.stop_event,'wait') as wait:
+            self.state.worker(Path('/same'),'b'*64,'/port','secret',False,2,True,1)
+        attempt.assert_called_once();wait.assert_not_called()
+        self.state.job.update(status='starting')
+        def network(*args):self.state.job.update(status='failed',retryable=True)
+        def stop(seconds):self.state.stop();return True
+        with patch.object(self.state,'_attempt',side_effect=network) as attempt,patch.object(self.state.stop_event,'wait',side_effect=stop):
+            self.state.worker(Path('/same'),'b'*64,'/port','secret',False,2,True,1)
+        attempt.assert_called_once();self.assertEqual(self.state.job['status'],'stopped')
+    def test_auto_resume_rejects_invalid_delay_and_activation(self):
+        for value in (0,16,True,1.5,'5'):
+            status,body=self.request('/api/start',{'retry_minutes':value})
+            self.assertEqual(status,400);self.assertIn('1–15',body['error'])
+        status,body=self.request('/api/start',{'auto_resume':True,'activate':True})
+        self.assertEqual(status,400);self.assertIn('activate separately',body['error'])
+
     def test_invalid_packet_delays_do_not_start_transfer(self):
         for pace in (0,-1,31,True,'5',None,float('inf'),float('nan')):
             self.assertEqual(self.request('/api/start',{'pace':pace})[0],400)

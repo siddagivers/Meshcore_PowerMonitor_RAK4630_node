@@ -29,6 +29,7 @@ def transfer_timing(job,now=None):
     end=job.get('finished',now)
     job['elapsed_seconds']=max(0,end-job['started'])
     job['eta_seconds']=None
+    job['retry_in_seconds']=max(0,job.get('retry_at',now)-now) if job['status']=='waiting' else None
     measured=end-job.get('progress_started',end)
     moved=job['sent']-job.get('resume_offset',job['sent'])
     if job['status'] in ('starting','running') and measured>=10 and moved>0:
@@ -41,6 +42,8 @@ class State:
         self.directory=Path(directory);self.directory.mkdir(parents=True,exist_ok=True,mode=0o700)
         self.packages=self.directory/'packages';self.packages.mkdir(exist_ok=True,mode=0o700)
         self.auth=auth;self.lock=threading.Lock();self.job=None;self.process=None
+        self.stop_event=threading.Event()
+        self.worker_active=False
 
     def ports(self):
         configured=os.environ.get('PM_OTA_PORTS')
@@ -107,19 +110,44 @@ class State:
         digest=request.get('sha256','');target=request.get('target','');port=request.get('port','');password=request.get('password','')
         pace=request.get('pace',2)
         if type(pace) not in (int,float) or not 1<=pace<=30:raise ValueError('Select a packet delay between 1 and 30 seconds')
+        activate=request.get('activate',False)
+        if type(activate) is not bool:raise ValueError('Invalid activation choice')
+        auto_resume=request.get('auto_resume',False);retry_minutes=request.get('retry_minutes',5)
+        if type(auto_resume) is not bool or type(retry_minutes) is not int or not 1<=retry_minutes<=15:raise ValueError('Auto-resume delay must be 1–15 whole minutes')
+        if auto_resume and activate:raise ValueError('Auto-resume is for upload and verify only; activate separately after success')
         if not re.fullmatch('[0-9a-f]{64}',digest) or not re.fullmatch('[0-9a-fA-F]{64}',target):raise ValueError('Exact package hash and target public key are required')
         if port not in self.ports():raise ValueError('Select a listed companion serial port')
         if not isinstance(password,str) or not 1<=len(password)<=128 or any(c in password for c in '\r\n\0'):raise ValueError('Enter the repeater admin password')
         path=self.packages/(digest+'.mota');metadata=lora_ota.inspect_package(path.read_bytes())
-        activate=request.get('activate',False)
-        if type(activate) is not bool:raise ValueError('Invalid activation choice')
         with self.lock:
-            if self.process is not None or (self.job and self.job['status'] in ('running','starting','stopping')):raise ValueError('An upload is already running')
-            self.job={'status':'starting','target':target,'port':port,'activate':activate,'pace':pace,'sha256':digest,'sent':0,'total':metadata['bytes'],'logs':[],'started':time.time()}
-            threading.Thread(target=self.worker,args=(path,target,port,password,activate,pace),daemon=True).start()
+            if self.worker_active or self.process is not None or (self.job and self.job['status'] in ('running','starting','stopping','waiting')):raise ValueError('An upload is already running')
+            self.stop_event.clear()
+            self.worker_active=True
+            self.job={'status':'starting','target':target,'port':port,'activate':activate,'pace':pace,'sha256':digest,'auto_resume':auto_resume,'retry_minutes':retry_minutes,'sent':0,'total':metadata['bytes'],'logs':[],'started':time.time()}
+            threading.Thread(target=self.worker,args=(path,target,port,password,activate,pace,auto_resume,retry_minutes),daemon=True).start()
         return {'started':True}
 
-    def worker(self,path,target,port,password,activate,pace=2):
+    def worker(self,path,target,port,password,activate,pace=2,auto_resume=False,retry_minutes=5):
+        try:
+            while not self.stop_event.is_set():
+                with self.lock:
+                    if self.job['status']=='stopping':break
+                    self.job['attempt']=self.job.get('attempt',0)+1
+                    self.job['started']=time.time();self.job['retryable']=False
+                    for name in ('finished','progress_started','resume_offset','retry_at'):self.job.pop(name,None)
+                self._attempt(path,target,port,password,activate,pace)
+                with self.lock:
+                    if self.job['status'] in ('complete','stopped','stopping') or not auto_resume or not self.job.get('retryable'):break
+                    self.job['status']='waiting';self.job['retry_at']=time.time()+retry_minutes*60
+                    self.job['logs']=(self.job['logs']+[f'Connection failed. Auto-resume of the same package in {retry_minutes} minute(s). Stop sending cancels pending retries.'])[-300:]
+                if self.stop_event.wait(retry_minutes*60):break
+            with self.lock:
+                if self.stop_event.is_set() or self.job['status']=='stopping':self.job['status']='stopped'
+        finally:
+            password=None
+            with self.lock:self.worker_active=False
+
+    def _attempt(self,path,target,port,password,activate,pace=2):
         command=[sys.executable,'-u',str(ROOT/'scripts/lora_ota.py'),'upload',str(path),'--port',port,'--target',target,'--password-stdin','--progress','--pace',str(pace)]
         if activate:command.append('--apply')
         process=None
@@ -132,6 +160,8 @@ class State:
             for line in process.stdout:
                 line=line.rstrip().replace(password,'[redacted]')
                 with self.lock:
+                    if line.startswith('PM_FAILURE retryable='):
+                        self.job['retryable']=line=='PM_FAILURE retryable=1';continue
                     if line.startswith('PM_ROUTE '):
                         self.job['route']=json.loads(line[9:]);continue
                     match=re.fullmatch(r'PM_PROGRESS (\d+) (\d+)',line)
@@ -142,8 +172,10 @@ class State:
                     else:self.job['logs']=(self.job['logs']+[line])[-300:]
             result=process.wait()
             with self.lock:self.job['status']='stopped' if self.job['status']=='stopping' else ('complete' if result==0 else 'failed')
-        except Exception:
-            with self.lock:self.job['status']='failed';self.job['logs'].append('Upload could not run. Check the companion connection and service logs.')
+        except Exception as error:
+            with self.lock:
+                self.job['status']='failed';self.job['retryable']=isinstance(error,(ConnectionError,TimeoutError))
+                self.job['logs'].append('Upload could not run. Check the companion connection and service logs.')
         finally:
             password=None
             with self.lock:
@@ -152,7 +184,8 @@ class State:
 
     def stop(self):
         with self.lock:
-            if self.job and self.job['status'] in ('starting','running'):
+            if self.job and self.job['status'] in ('starting','running','waiting'):
+                self.stop_event.set()
                 self.job['status']='stopping'
                 if self.process:self.process.terminate()
         return {'stopping':True}

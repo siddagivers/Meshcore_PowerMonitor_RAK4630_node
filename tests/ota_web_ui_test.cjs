@@ -18,6 +18,10 @@ function page(saved){
  assert.match(restored.nodes['transfer-timing'].textContent,/30s/);
  assert.match(restored.nodes['transfer-timing'].textContent,/3m 0s/);
  assert.equal(restored.nodes['activation-command'].textContent,'pm ota apply 844497f0');
+ vm.runInContext('showTransferDetails('+JSON.stringify({status:'waiting',sent:32000,total:381566,elapsed_seconds:600,retry_in_seconds:120,attempt:2,sha256:'844497f0'+'a'.repeat(56)})+')',restored.sandbox);
+ assert.match(restored.nodes['transfer-timing'].textContent,/auto-resume in 2m 0s/);
+ restored.nodes['auto-resume'].checked=true;restored.nodes['auto-resume'].onchange();
+ assert.equal(restored.nodes.activate.disabled,true);
  for(const id of ['target','repeater-nickname','password'])first.sandbox.document.getElementById(id);
  first.nodes.target.value='c'.repeat(64);first.nodes['repeater-nickname'].value='Hill repeater';first.nodes.password.value='never-store-this';await first.nodes['save-repeater'].onclick();assert.equal(JSON.parse(first.storage.get('pm-repeaters'))[0].name,'Hill repeater');assert.equal(JSON.stringify([...first.storage]).includes('never-store-this'),false);first.nodes['saved-repeaters'].value='c'.repeat(64);await first.nodes['saved-repeaters'].onchange();assert.equal(first.nodes.target.value,'c'.repeat(64));assert.equal(first.nodes.password.value,'');await first.nodes['remove-repeater'].onclick();assert.equal(JSON.parse(first.storage.get('pm-repeaters')).length,0);
  vm.runInContext('showRoute('+JSON.stringify({known:true,hop_count:1,target:'Target',hops:[{id:'00',candidates:['Hill','Valley']}]})+')',restored.sandbox);assert.match(restored.nodes['transfer-route'].textContent,/possible: Hill \/ Valley/);assert.match(restored.nodes['transfer-route'].textContent,/1 repeater hops/);vm.runInContext('showRoute('+JSON.stringify({known:true,hop_count:0,target:'Target',hops:[]})+')',restored.sandbox);assert.match(restored.nodes['transfer-route'].textContent,/Direct, no repeater hops/);

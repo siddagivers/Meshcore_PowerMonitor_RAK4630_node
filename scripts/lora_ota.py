@@ -201,6 +201,11 @@ def main():
     else:
         if not re.fullmatch(r"[0-9a-fA-F]{64}",args.target):parser.error("--target must be the exact 32-byte public key")
         if args.pace<1 or args.timeout<5 or not 1<=args.retries<=20:parser.error("pace >=1 second, timeout >=5 seconds, retries 1..20")
-        asyncio.run(upload(args))
+        try:asyncio.run(upload(args))
+        except Exception as error:
+            text=str(error).lower()
+            retryable=isinstance(error,(TimeoutError,ConnectionError)) or (isinstance(error,OSError) and not isinstance(error,FileNotFoundError)) or any(message in text for message in ('no reply after','companion send rejected','companion rejected the request','companion request timed out','shared companion is not ready','companion disconnected','companion not connected','waiting for the existing','waiting for the scheduled'))
+            print('PM_FAILURE retryable='+str(int(retryable)),flush=True)
+            raise
 
 if __name__=="__main__":main()
