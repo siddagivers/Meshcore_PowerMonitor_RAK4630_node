@@ -13,3 +13,14 @@ assert.equal(nodes.messages.children.length,1,'Telemetry must not appear in the 
 vm.runInContext("lastId=1",sandbox);nodes.read.onclick();assert.equal(nodes.unread.textContent,'');
 assert.equal(requests.length,1,'Loading and rendering must never send a message');
 console.log('PASS: contact/channel selection, unread state, literal message rendering; no automatic sends');
+(async()=>{
+ assert.equal(vm.runInContext('defaultFavourites.length',sandbox),5);
+ vm.runInContext('contacts=[{public_key:"bb".repeat(32),adv_name:"Zed"},{public_key:"cc".repeat(32),adv_name:"Alpha"}];favourites=new Set(["bb".repeat(32)]);showContacts();',sandbox);
+ assert.equal(nodes.destination.options[1].value,'contact:'+'bb'.repeat(32));
+ assert.match(nodes.destination.options[1].textContent,/★/);
+ assert.equal(nodes.contacts.children[0].className,'favourite-contact');
+ await nodes.contacts.children[0].children[0].onclick();
+ assert.equal(nodes.destination.options[1].value,'contact:'+'cc'.repeat(32));
+ assert.equal(requests.length,1,'Favourite changes must not send radio messages');
+ console.log('PASS: five pinned contacts, favourites first, star highlight and local toggle without radio traffic');
+})().catch(error=>{console.error(error);process.exitCode=1;});
