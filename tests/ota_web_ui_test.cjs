@@ -2,7 +2,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const source=fs.readFileSync('web/app.js','utf8');
 function page(saved){
  const nodes={},storage=new Map(saved?[['pm-prepared',JSON.stringify(saved)]]:[]);
- const sandbox={document:{getElementById(id){return nodes[id]??={textContent:'',value:'',hidden:false,classList:{toggle(){}},replaceChildren(){}};}},sessionStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},fetch:()=>new Promise(()=>{}),setInterval(){},confirm:()=>false,Option:function(){}};
+ const sandbox={document:{getElementById(id){return nodes[id]??={textContent:'',value:'',hidden:false,classList:{toggle(){}},replaceChildren(){}};}},sessionStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},fetch:()=>new Promise(()=>{}),setInterval(){},confirm:()=>false,Option:function(){}};
  vm.createContext(sandbox);vm.runInContext(source,sandbox);return {sandbox,nodes,storage};
 }
 (async()=>{
@@ -18,5 +18,7 @@ function page(saved){
  assert.match(restored.nodes['transfer-timing'].textContent,/30s/);
  assert.match(restored.nodes['transfer-timing'].textContent,/3m 0s/);
  assert.equal(restored.nodes['activation-command'].textContent,'pm ota apply 844497f0');
+ for(const id of ['target','repeater-nickname','password'])first.sandbox.document.getElementById(id);
+ first.nodes.target.value='c'.repeat(64);first.nodes['repeater-nickname'].value='Hill repeater';first.nodes.password.value='never-store-this';await first.nodes['save-repeater'].onclick();assert.equal(JSON.parse(first.storage.get('pm-repeaters'))[0].name,'Hill repeater');assert.equal(JSON.stringify([...first.storage]).includes('never-store-this'),false);first.nodes['saved-repeaters'].value='c'.repeat(64);await first.nodes['saved-repeaters'].onchange();assert.equal(first.nodes.target.value,'c'.repeat(64));assert.equal(first.nodes.password.value,'');await first.nodes['remove-repeater'].onclick();assert.equal(JSON.parse(first.storage.get('pm-repeaters')).length,0);
  console.log('PASS: visible errors, refresh restores package, elapsed/ETA and exact activation command');
 })();
