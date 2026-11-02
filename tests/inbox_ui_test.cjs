@@ -6,6 +6,8 @@ vm.createContext(sandbox);vm.runInContext(fs.readFileSync('inbox/app.js','utf8')
 assert.equal(requests.length,1);assert.equal(requests[0][0],'/api/state');
 vm.runInContext('contacts=[{public_key:"aa".repeat(32),adv_name:"Test node"}];channels=[{index:0,name:"Public"}];events=[{id:1,kind:"contact_message",direction:"in",peer:"aa",received:1,text:"<script>unsafe</script>",payload:{}}];showContacts();showEvents();',sandbox);
 assert.equal(nodes.destination.options.length,3);
+assert.equal(vm.runInContext('label('+JSON.stringify({kind:'channel_message',peer:'0'})+')',sandbox),'Channel Public');
+assert.equal(vm.runInContext('label('+JSON.stringify({kind:'channel_message',peer:'7'})+')',sandbox),'Channel 7');
 assert.equal(nodes.messages.children[0].children[1].textContent,'<script>unsafe</script>');
 assert.match(nodes.unread.textContent,/1 unread/);
 vm.runInContext('events.push({id:2,kind:"telemetry_response",direction:"in",peer:"aa",received:2,text:"",payload:{lpp:[]}});showEvents();',sandbox);
