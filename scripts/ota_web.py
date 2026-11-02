@@ -233,12 +233,12 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception:pass
                 return self.respond(200,{'ports':state.ports(),'signer':state.key_info(),'job':job,'companion':companion})
             if self.path=='/downloads/receiver.zip':
-                return self.respond(200,(ROOT/'releases/v0.4.2-bootstrap.2/RAK4631_official_rak15001_lora_ota_PM_v0.4.2-bootstrap.2.zip').read_bytes(),'application/zip')
+                return self.respond(200,(ROOT/'releases/v0.4.2-bootstrap.3/RAK4631_official_rak15001_lora_ota_PM_v0.4.2-bootstrap.3.zip').read_bytes(),'application/zip')
             if self.path=='/downloads/receiver.json':
-                return self.respond(200,(ROOT/'releases/v0.4.2-bootstrap.2/RAK4631_official_rak15001_lora_ota_PM_v0.4.2-bootstrap.2.json').read_bytes())
+                return self.respond(200,(ROOT/'releases/v0.4.2-bootstrap.3/RAK4631_official_rak15001_lora_ota_PM_v0.4.2-bootstrap.3.json').read_bytes())
             if self.path in ('/downloads/test.zip','/downloads/test.json'):
                 suffix=self.path.rsplit('.',1)[1]
-                path=ROOT/'releases/v0.4.2-ota-test.2'/('RAK4631_official_rak15001_lora_ota_PM_v0.4.2-ota-test.2.'+suffix)
+                path=ROOT/'releases/v0.4.2-ota-test.3'/('RAK4631_official_rak15001_lora_ota_PM_v0.4.2-ota-test.3.'+suffix)
                 return self.respond(200,path.read_bytes(),'application/zip' if suffix=='zip' else 'application/json')
             if re.fullmatch(r'/packages/[0-9a-f]{64}\.mota',self.path):
                 name=self.path.rsplit('/',1)[1]
