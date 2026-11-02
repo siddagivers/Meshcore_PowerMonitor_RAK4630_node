@@ -208,15 +208,31 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError,KeyError,TypeError,zipfile.BadZipFile,binascii.Error) as e:self.respond(400,{'error':str(e)[:220]})
         except Exception:self.respond(400,{'error':'Package validation or request failed'})
 
+class TLSHTTPServer(ThreadingHTTPServer):
+    # A client that opens TCP without completing TLS must not block accept().
+    # Perform the handshake in its worker, with a bounded idle timeout.
+    request_queue_size=32
+    def process_request_thread(self,request,client_address):
+        connection=request
+        try:
+            request.settimeout(15)
+            connection=self.tls.wrap_socket(request,server_side=True,do_handshake_on_connect=False)
+            connection.do_handshake()
+            super().process_request_thread(connection,client_address)
+        except (OSError,ssl.SSLError):
+            pass
+        finally:
+            self.shutdown_request(connection)
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bind',default='0.0.0.0');parser.add_argument('--port',type=int,default=8443)
     parser.add_argument('--directory',type=Path,required=True);parser.add_argument('--auth',type=Path,required=True)
     parser.add_argument('--cert',required=True);parser.add_argument('--key',required=True)
-    args=parser.parse_args();server=ThreadingHTTPServer((args.bind,args.port),Handler)
+    args=parser.parse_args();server=TLSHTTPServer((args.bind,args.port),Handler)
     server.state=State(args.directory,json.loads(args.auth.read_text()))
     tls=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);tls.minimum_version=ssl.TLSVersion.TLSv1_2;tls.load_cert_chain(args.cert,args.key)
-    server.socket=tls.wrap_socket(server.socket,server_side=True)
+    server.tls=tls
     print(f'PowerMonitor HTTPS uploader listening on port {args.port}',flush=True);server.serve_forever()
 
 if __name__=='__main__':main()

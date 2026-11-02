@@ -10,6 +10,8 @@ import zipfile
 import sys
 import tempfile
 import threading
+import socket
+import ssl
 import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
@@ -17,6 +19,36 @@ import ota_web
 import lora_ota
 
 class WebTest(unittest.TestCase):
+    def test_incomplete_tls_does_not_block_other_visitors(self):
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes,serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+        from cryptography.x509.oid import NameOID
+        import datetime
+        key=ec.generate_private_key(ec.SECP256R1())
+        name=x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,'localhost')])
+        now=datetime.datetime.now(datetime.timezone.utc)
+        cert=(x509.CertificateBuilder().subject_name(name).issuer_name(name)
+              .public_key(key.public_key()).serial_number(x509.random_serial_number())
+              .not_valid_before(now-datetime.timedelta(minutes=1))
+              .not_valid_after(now+datetime.timedelta(days=1)).sign(key,hashes.SHA256()))
+        certfile=Path(self.folder.name)/'cert.pem';keyfile=Path(self.folder.name)/'tls.pem'
+        certfile.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+        keyfile.write_bytes(key.private_bytes(serialization.Encoding.PEM,serialization.PrivateFormat.PKCS8,serialization.NoEncryption()))
+        server=ota_web.TLSHTTPServer(('127.0.0.1',0),ota_web.Handler)
+        server.state=self.state;server.tls=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        server.tls.load_cert_chain(certfile,keyfile)
+        thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+        stalled=socket.create_connection(server.server_address,timeout=2)
+        try:
+            context=ssl.create_default_context(cafile=str(certfile))
+            connection=http.client.HTTPSConnection('localhost',server.server_port,context=context,timeout=2)
+            connection.request('GET','/api/status')
+            response=connection.getresponse()
+            self.assertEqual(response.status,401);response.read();connection.close()
+        finally:
+            stalled.close();server.shutdown();server.server_close()
+
     def setUp(self):
         self.folder=tempfile.TemporaryDirectory();salt=b'local-test-salt'
         self.auth={'salt':salt.hex(),'hash':hashlib.pbkdf2_hmac('sha256',b'test-only-password',salt,200000).hex()}
