@@ -160,6 +160,10 @@ class Hub:
             try:
                 if op=='contacts':
                     await self.mc.commands.get_contacts();self.snapshot_contacts();return self.store.cache('contacts')
+                if op=='advert':
+                    result=await self.mc.commands.send_advert(flood=False)
+                    if result is None or result.type==EventType.ERROR:raise RuntimeError('Companion rejected the advert')
+                    return {'status':'Local advert accepted by the companion; reception by other nodes is not confirmed'}
                 if op=='import':
                     raw=request.get('card','');raw=raw.removeprefix('meshcore://')
                     if not re.fullmatch('[0-9a-fA-F]{2,1024}',raw) or len(raw)%2:raise ValueError('Enter an exported meshcore:// contact card')
@@ -254,7 +258,7 @@ class ChatHandler(Handler):
             size=int(self.headers.get('Content-Length','0'))
             if not 0<size<=10000:raise ValueError('Invalid request size')
             request=json.loads(self.rfile.read(size))
-            allowed={'/api/send':('message','channel'),'/api/contact':('add','remove','import'),'/api/refresh':('contacts',),'/api/telemetry':('telemetry',)}
+            allowed={'/api/send':('message','channel'),'/api/contact':('add','remove','import'),'/api/refresh':('contacts',),'/api/telemetry':('telemetry',),'/api/advert':('advert',)}
             if request.get('op') not in allowed.get(self.path,()):raise ValueError('Unsupported action')
             result=call_sync(request);self.respond(200,result)
         except (ValueError,RuntimeError) as error:self.respond(400,{'error':str(error)[:180]})
