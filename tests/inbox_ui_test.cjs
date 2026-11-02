@@ -8,6 +8,8 @@ vm.runInContext('contacts=[{public_key:"aa".repeat(32),adv_name:"Test node"}];ch
 assert.equal(nodes.destination.options.length,3);
 assert.equal(nodes.messages.children[0].children[1].textContent,'<script>unsafe</script>');
 assert.match(nodes.unread.textContent,/1 unread/);
+vm.runInContext('events.push({id:2,kind:"telemetry_response",direction:"in",peer:"aa",received:2,text:"",payload:{lpp:[]}});showEvents();',sandbox);
+assert.equal(nodes.messages.children.length,1,'Telemetry must not appear in the chat inbox');
 vm.runInContext("lastId=1",sandbox);nodes.read.onclick();assert.equal(nodes.unread.textContent,'');
 assert.equal(requests.length,1,'Loading and rendering must never send a message');
 console.log('PASS: contact/channel selection, unread state, literal message rendering; no automatic sends');
