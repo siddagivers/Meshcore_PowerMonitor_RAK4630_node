@@ -204,7 +204,7 @@ def main():
         try:asyncio.run(upload(args))
         except Exception as error:
             text=str(error).lower()
-            retryable=isinstance(error,(TimeoutError,ConnectionError)) or (isinstance(error,OSError) and not isinstance(error,FileNotFoundError)) or any(message in text for message in ('no reply after','companion send rejected','companion rejected the request','companion request timed out','shared companion is not ready','companion disconnected','companion not connected','waiting for the existing','waiting for the scheduled'))
+            retryable=isinstance(error,(TimeoutError,ConnectionError)) or (isinstance(error,OSError) and not isinstance(error,FileNotFoundError)) or any(message in text for message in ('no login reply','companion rejected the login send','no reply after','companion send rejected','companion rejected the request','companion request timed out','shared companion is not ready','companion disconnected','companion not connected','waiting for the existing','waiting for the scheduled'))
             print('PM_FAILURE retryable='+str(int(retryable)),flush=True)
             raise
 

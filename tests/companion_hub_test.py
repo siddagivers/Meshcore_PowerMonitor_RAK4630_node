@@ -58,6 +58,24 @@ class StoreTest(unittest.TestCase):
             finally:server.shutdown();server.server_close()
 
 class HubTest(unittest.IsolatedAsyncioTestCase):
+    async def test_login_captures_immediate_reply_and_checks_sender(self):
+        with tempfile.TemporaryDirectory() as d:
+            hub=inbox.Hub(inbox.Store(Path(d)/'db'),'/none','/none');callbacks={}
+            contact={'public_key':'a'*64}
+            def subscribe(kind,callback):callbacks[kind]=callback;return SimpleNamespace(unsubscribe=lambda:None)
+            async def send(contact,password):
+                self.assertIn(EventType.LOGIN_SUCCESS,callbacks)
+                callbacks[EventType.LOGIN_FAILED](SimpleNamespace(type=EventType.LOGIN_FAILED,payload={'pubkey_prefix':'b'*12}))
+                callbacks[EventType.LOGIN_SUCCESS](SimpleNamespace(type=EventType.LOGIN_SUCCESS,payload={'pubkey_prefix':'a'*12,'is_admin':True}))
+                return SimpleNamespace(type=EventType.OK)
+            hub.mc=SimpleNamespace(subscribe=subscribe,commands=SimpleNamespace(send_login=send))
+            self.assertEqual(await hub.login(contact,'test-only'),{'logged_in':True})
+            async def reject(contact,password):
+                callbacks[EventType.LOGIN_FAILED](SimpleNamespace(type=EventType.LOGIN_FAILED,payload={'pubkey_prefix':'a'*12}))
+                return SimpleNamespace(type=EventType.OK)
+            hub.mc.commands.send_login=reject
+            with self.assertRaisesRegex(RuntimeError,'explicitly rejected'):await hub.login(contact,'test-only')
+
     async def test_ota_waits_for_telemetry_before_send(self):
         with tempfile.TemporaryDirectory() as d:
             hub=inbox.Hub(inbox.Store(Path(d)/'db'),'/none','/none');hub.online=True

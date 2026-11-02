@@ -74,6 +74,25 @@ class Hub:
     def snapshot_contacts(self):
         contacts=[{k:c.get(k) for k in ('public_key','adv_name','type','out_path','out_path_len','out_path_hash_mode','flags','last_advert')} for c in self.mc.contacts.values()]
         self.store.cache('contacts',contacts)
+    async def login(self,contact,password):
+        from meshcore import EventType
+        future=asyncio.get_running_loop().create_future()
+        def response(event):
+            if event.payload.get('pubkey_prefix')==contact['public_key'][:12] and not future.done():future.set_result(event)
+        # The library's sync helper subscribes only after sending. A fast
+        # reply may already have arrived by then. Also distinguish an explicit
+        # denial from a missing reply instead of calling both a bad password.
+        subscriptions=[self.mc.subscribe(kind,response) for kind in (EventType.LOGIN_SUCCESS,EventType.LOGIN_FAILED)]
+        try:
+            result=await self.mc.commands.send_login(contact,password)
+            if result is None or result.type==EventType.ERROR:raise TimeoutError('Companion rejected the login send; retry the connection')
+            try:event=await asyncio.wait_for(future,60)
+            except asyncio.TimeoutError:raise TimeoutError('No login reply from the target within 60 seconds; password was not confirmed or rejected') from None
+            if event.type==EventType.LOGIN_FAILED:raise RuntimeError('Repeater explicitly rejected login; check credentials and access rules')
+            if event.payload.get('is_admin') is False:raise RuntimeError('Login succeeded without admin permissions; OTA requires admin access')
+            return {'logged_in':True}
+        finally:
+            for subscription in subscriptions:subscription.unsubscribe()
     def event(self,event):
         from meshcore import EventType
         payload=plain(event.payload);kind=event.type.value
@@ -196,8 +215,7 @@ class Hub:
                     elif op=='login':
                         password=request.get('password','')
                         if not isinstance(password,str) or not 1<=len(password)<=128:raise ValueError('Invalid admin password')
-                        ok=await self.mc.commands.send_login_sync(contact,password,min_timeout=30)
-                        return {'logged_in':bool(ok)}
+                        return await self.login(contact,password)
                     elif op=='remove':result=await self.mc.commands.remove_contact(contact)
                     elif op=='message':
                         text=request.get('text','');self.validate_text(text)
@@ -228,7 +246,7 @@ class Hub:
                 except asyncio.CancelledError:pass
                 return
             result=await task;response={'ok':True,'result':result}
-        except (ValueError,RuntimeError) as error:response={'ok':False,'error':str(error)[:180]}
+        except (ValueError,RuntimeError,TimeoutError) as error:response={'ok':False,'error':str(error)[:180]}
         except Exception:response={'ok':False,'error':'Companion request timed out or disconnected; check connection and retry'}
         finally:
             if watch:watch.cancel()
