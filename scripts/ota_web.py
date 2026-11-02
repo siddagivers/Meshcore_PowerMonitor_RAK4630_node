@@ -132,6 +132,8 @@ class State:
             for line in process.stdout:
                 line=line.rstrip().replace(password,'[redacted]')
                 with self.lock:
+                    if line.startswith('PM_ROUTE '):
+                        self.job['route']=json.loads(line[9:]);continue
                     match=re.fullmatch(r'PM_PROGRESS (\d+) (\d+)',line)
                     if match:
                         if 'progress_started' not in self.job:

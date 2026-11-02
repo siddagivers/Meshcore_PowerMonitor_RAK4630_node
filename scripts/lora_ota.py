@@ -64,6 +64,20 @@ def inspect_package(data):
         raise ValueError("invalid EndF")
     return {"bytes":len(data),"image_bytes":size,"sha256":h(data).hex(),"signer":m[97:129].hex(),"target":hex(target),"version":version}
 
+def describe_route(contact,contacts):
+    count=contact.get('out_path_len',-1);mode=contact.get('out_path_hash_mode',0)
+    route={'target':contact.get('adv_name') or contact['public_key'][:12],'hops':[],'hop_count':count,'known':False}
+    if count==0:route['known']=True;return route
+    if not isinstance(count,int) or not 0<count<=63 or mode not in (0,1,2,3):return route
+    raw=contact.get('out_path','').lower();width=(mode+1)*2
+    if len(raw)!=count*width or not re.fullmatch('[0-9a-f]+',raw):return route
+    route['known']=True
+    for i in range(count):
+        prefix=raw[i*width:(i+1)*width]
+        names=sorted(set(c.get('adv_name') or c['public_key'][:12] for c in contacts.values() if c.get('type')==2 and c.get('public_key','').lower().startswith(prefix)))
+        route['hops'].append({'id':prefix,'candidates':names})
+    return route
+
 class Radio:
     def __init__(self,mc,contact,timeout=60,retries=5,pace=2):
         self.mc,self.contact=mc,contact
@@ -91,7 +105,9 @@ class Radio:
                 if result is None or result.type==EventType.ERROR:raise TimeoutError("companion send rejected")
                 response=await asyncio.wait_for(received,self.timeout)
                 return response
-            except (TimeoutError,asyncio.TimeoutError):
+            except (TimeoutError,asyncio.TimeoutError) as error:
+                reason='Companion rejected the send or did not accept it' if str(error)=='companion send rejected' else 'No matching reply before timeout'
+                print(f"Attempt {attempt+1}/{self.retries}: {reason}. This alone does not identify a failed repeater.",flush=True)
                 if attempt+1==self.retries:raise TimeoutError(f"No reply after {self.retries} attempts; rerun to resume")
                 await asyncio.sleep(min(5*(attempt+1),30))
             finally:sub.unsubscribe()
@@ -106,6 +122,7 @@ async def upload(args):
         contact=mc.get_contact_by_key_prefix(args.target.lower())
         if not contact or contact["public_key"].lower()!=args.target.lower():raise ValueError("exact target public key must exist in companion contacts")
         if contact.get("out_path_len",-1) in (-1,255):raise ValueError("Learn a direct/repeater route first; uploader does not flood or reset routes")
+        print('PM_ROUTE '+json.dumps(describe_route(contact,mc.contacts)),flush=True)
         password=sys.stdin.readline().rstrip("\r\n") if getattr(args,"password_stdin",False) else getpass.getpass("Repeater admin password: ")
         if not password:raise ValueError("admin password is required")
         if not await mc.commands.send_login_sync(contact,password,min_timeout=30):raise RuntimeError("admin login failed")

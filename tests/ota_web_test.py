@@ -122,13 +122,13 @@ class WebTest(unittest.TestCase):
         class Pipe(io.StringIO):
             def close(self):pass
         class Process:
-            stdin=Pipe();stdout=iter(['private-test-value\n','PM_PROGRESS 40 5000\n'])
+            stdin=Pipe();stdout=iter(['private-test-value\n','PM_ROUTE '+json.dumps({'known':True,'target':'Target','hops':[],'hop_count':0})+'\n','PM_PROGRESS 40 5000\n'])
             def wait(self):return 0
         with patch('subprocess.Popen',return_value=Process()) as spawned:
             self.state.worker(self.state.packages/(info['sha256']+'.mota'),'b'*64,'/dev/test-companion','private-test-value',False,5)
         self.assertNotIn('private-test-value',json.dumps(self.state.job))
         self.assertNotIn('private-test-value',' '.join(spawned.call_args.args[0]))
-        self.assertEqual(spawned.call_args.args[0][-2:],['--pace','5']);self.assertNotIn('--apply',spawned.call_args.args[0]);self.assertEqual(self.state.job['sent'],40)
+        self.assertEqual(self.state.job['route']['hop_count'],0);self.assertEqual(spawned.call_args.args[0][-2:],['--pace','5']);self.assertNotIn('--apply',spawned.call_args.args[0]);self.assertEqual(self.state.job['sent'],40)
     def test_dfu_zip_can_be_renamed_and_old_profile_rejected(self):
         self.state.create_key();binary=bytearray(b'\x55'*5000);struct.pack_into('<II',binary,0,0x2003f000,0x26021)
         import binascii

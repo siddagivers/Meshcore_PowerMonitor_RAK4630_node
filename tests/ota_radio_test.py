@@ -39,3 +39,14 @@ async def main():
     finally:ota.asyncio.sleep=original
 asyncio.run(main())
 print('PASS: uploader subscribes before transmit, correlates replies, retries lost ACKs and stops after bounded failure')
+# Route decoding must preserve zero bytes and distinguish prefix collisions.
+contacts={'one':{'type':2,'public_key':'00'+'a'*62,'adv_name':'Zero hop'},'two':{'type':2,'public_key':'00'+'b'*62,'adv_name':'Other zero hop'}}
+r=ota.describe_route({'public_key':'f'*64,'adv_name':'Target','out_path_len':2,'out_path_hash_mode':0,'out_path':'00ab'},contacts)
+assert r['known'] and r['hops'][0]['id']=='00' and len(r['hops'][0]['candidates'])==2
+assert r['hops'][1]['id']=='ab' and not r['hops'][1]['candidates']
+assert ota.describe_route({'public_key':'f'*64,'out_path_len':0},contacts)['known']
+assert not ota.describe_route({'public_key':'f'*64,'out_path_len':-1},contacts)['known']
+r=ota.describe_route({'public_key':'f'*64,'out_path_len':1,'out_path_hash_mode':1,'out_path':'00ab'},contacts)
+assert r['hops'][0]['id']=='00ab'
+assert not ota.describe_route({'public_key':'f'*64,'out_path_len':2,'out_path':'ab'},contacts)['known']
+print('PASS: direct, multi-byte and zero hop IDs, unknown names, collisions and malformed paths')
