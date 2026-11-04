@@ -6,9 +6,27 @@
 #include <SHA256.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(ARDUINO) || defined(PM_OTA_SOFTWARE_SIGNATURE)
+#include <Ed25519.h>
+#endif
+#ifdef ARDUINO
+#include <Arduino.h>
+#endif
 
 namespace mesh {
 namespace ota {
+
+// OTA runs on its own task. Never enter MeshCore's shared CC310 workspace
+// from that task: the vendor HAL waits indefinitely for hardware completion.
+static bool verifySignature(const MotaManifest& m) {
+#if defined(ARDUINO) || defined(PM_OTA_SOFTWARE_SIGNATURE)
+  return Ed25519::verify(m.signature, m.signer_pubkey,
+                        m.manifest_start, m.signed_len);
+#else
+  mesh::Identity signer(m.signer_pubkey);
+  return signer.verify(m.signature, m.manifest_start, (int)m.signed_len);
+#endif
+}
 
 VerifyResult ota_verify(const uint8_t* buf, uint32_t len, const SignerAllowlist& allow) {
   VerifyResult r;
@@ -21,8 +39,7 @@ VerifyResult ota_verify(const uint8_t* buf, uint32_t len, const SignerAllowlist&
                            : true;   // delta image_hash needs the base; verified at apply time
   r.is_signed = m.is_signed();
   if (r.is_signed) {
-    mesh::Identity signer(m.signer_pubkey);
-    r.sig_ok = signer.verify(m.signature, m.manifest_start, (int)m.signed_len);
+    r.sig_ok = verifySignature(m);
     r.trusted = r.sig_ok && allow.contains(m.signer_pubkey);
   }
   return r;
@@ -91,6 +108,10 @@ static VerifyResult ota_verify_store(const OtaStore& store,
     if (m.is_full()) image_sha.update(block, n);
     container_sha.update(block, n);
     off += n;
+#ifdef ARDUINO
+    // Let USB/BLE and other RTOS tasks run between bounded hash blocks.
+    delay(1);
+#endif
   }
   if (off != m.payload_size) r.payload_ok = false;
   if (m.is_full() && r.payload_ok) {
@@ -109,8 +130,7 @@ static VerifyResult ota_verify_store(const OtaStore& store,
 
   r.is_signed = m.is_signed();
   if (r.is_signed) {
-    mesh::Identity signer(m.signer_pubkey);
-    r.sig_ok = signer.verify(m.signature, m.manifest_start, (int)m.signed_len);
+    r.sig_ok = verifySignature(m);
     r.trusted = r.sig_ok && allow.contains(m.signer_pubkey);
   }
   free(leaves);

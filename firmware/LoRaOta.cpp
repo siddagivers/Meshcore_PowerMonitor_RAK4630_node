@@ -18,6 +18,9 @@
 #include <nrf.h>
 #include <nrf_soc.h>
 #include <nrf_sdm.h>
+#include <FreeRTOS.h>
+#include <task.h>
+#include <semphr.h>
 using namespace Adafruit_LittleFS_Namespace;
 using namespace mesh::ota;
 extern pm::PowerMonitor power_monitor;
@@ -36,6 +39,17 @@ const char* applyResult="No activation attempted this boot; check pm version aft
 const char* HW="RAK4631_RAK15001_C";
 const char* TRUST="/pm-ota.pub";
 const char* PAIR="/pm-ota.pair";
+// The Arduino loop task has only 4 KiB. OTA verification plus its command
+// receive frames and signature arithmetic must not share that stack.
+struct VerificationJob {
+  uint8_t key[32];
+  char reply[153]={};
+  const char* volatile stage="starting";
+  volatile uint32_t offset=0,stackFree=0;
+  bool ok=false;
+  SemaphoreHandle_t done=nullptr;
+};
+std::unique_ptr<VerificationJob> verification;
 struct Journal {uint32_t magic,total,next;uint8_t hash[32],checksum[32];};
 const uint32_t JOURNAL_MAGIC=0x504D4F54;
 bool readExact(const char* name,void* out,size_t size) {
@@ -95,16 +109,17 @@ const BootInfo& bootInfo() {
   return info;
 }
 bool bootCompatible(){return bootInfo().handoff==GPREGRET2_OTA_STAGE_RAK15001;}
-bool verify(char* reply,size_t cap) {
+bool verifyImage(VerificationJob& job) {
+  char* reply=job.reply;const size_t cap=sizeof(job.reply);
   auto& t=session->transfer;
-  if(!t.complete()||!save()){snprintf(reply,cap,"Err incomplete/checkpoint");return false;}
-  uint8_t key[32],raw[MOTA_MFL],header[8],hash[32],buffer[256];
-  if(!readExact(TRUST,key,32)){snprintf(reply,cap,"Err provision signer over local USB first");return false;}
+  uint8_t raw[MOTA_MFL],header[8],hash[32],buffer[256];
+  job.stage="container SHA256";
   SHA256 sha;
   for(uint32_t offset=0;offset<t.total;) {
     uint32_t size=t.total-offset;if(size>sizeof(buffer))size=sizeof(buffer);
     if(!session->store.read(offset,buffer,size)){snprintf(reply,cap,"Err flash read");return false;}
-    sha.update(buffer,size);offset+=size;
+    sha.update(buffer,size);offset+=size;job.offset=offset;
+    if(!(offset%4096))vTaskDelay(1);
   }
   sha.finalize(hash,32);
   if(memcmp(hash,t.digest,32)){snprintf(reply,cap,"Err container SHA256");return false;}
@@ -122,9 +137,11 @@ bool verify(char* reply,size_t cap) {
     ||m.target_id!=rd_u32le(target)||memcmp(m.hw_id,hardware,32)||memcmp(raw+MOTA_OFF_APPROVAL,APPROVAL_NOT,4)) {
     snprintf(reply,cap,"Err signed full image/profile/size required");return false;
   }
-  SignerAllowlist allow;allow.add(key);
+  job.stage="Merkle/image/signature";job.offset=0;
+  SignerAllowlist allow;allow.add(job.key);
   const auto result=ota_verify(session->store,allow,raw);
   if(!result.auto_appliable()){snprintf(reply,cap,"Err signature/signer/Merkle/image verification");return false;}
+  job.stage="vectors/EndF";
   // Independently require sane application vectors and matching signed EndF.
   const uint32_t payload=8+MOTA_MFL+m.block_count*4;
   uint8_t vectors[8],endf[ENDF_LEN];
@@ -141,12 +158,54 @@ bool verify(char* reply,size_t cap) {
   for(uint32_t offset=0;offset<m.image_size-ENDF_LEN;) {
     uint32_t size=m.image_size-ENDF_LEN-offset;if(size>sizeof(buffer))size=sizeof(buffer);
     if(!session->store.read(payload+offset,buffer,size)){snprintf(reply,cap,"Err body read");return false;}
-    bodySha.update(buffer,size);offset+=size;
+    bodySha.update(buffer,size);offset+=size;job.offset=offset;
+    if(!(offset%4096))vTaskDelay(1);
   }
   bodySha.finalize(hash,32);
   if(memcmp(hash,endf+8,8)){snprintf(reply,cap,"Err EndF body hash");return false;}
   memcpy(hash,t.digest,32);
-  t.verified=true;snprintf(reply,cap,"OK verified %02x%02x%02x%02x; apply requires explicit command",hash[0],hash[1],hash[2],hash[3]);return true;
+  snprintf(reply,cap,"OK verified %02x%02x%02x%02x; apply requires explicit command",hash[0],hash[1],hash[2],hash[3]);return true;
+}
+void verificationTask(void* argument) {
+  auto* job=static_cast<VerificationJob*>(argument);
+  job->ok=verifyImage(*job);
+  job->stackFree=uxTaskGetStackHighWaterMark(nullptr)*sizeof(StackType_t);
+  job->stage="finished";
+  xSemaphoreGive(job->done);
+  // No job access after signalling: the loop task may now destroy it.
+  vTaskDelete(nullptr);
+}
+uint32_t lastVerifyStackFree=0;
+char lastVerifyReply[153]="No verification attempted this boot";
+bool verify(char* reply,size_t cap) {
+  if(!verification) {
+    auto& t=session->transfer;
+    if(!t.complete()||!save()){snprintf(reply,cap,"Err incomplete/checkpoint");return false;}
+    verification.reset(new(std::nothrow) VerificationJob);
+    if(!verification){snprintf(reply,cap,"Err verification heap");return false;}
+    if(!readExact(TRUST,verification->key,32)) {
+      verification.reset();snprintf(reply,cap,"Err provision signer over local USB first");return false;
+    }
+    t.verified=false;
+    verification->done=xSemaphoreCreateBinary();
+    if(!verification->done || xTaskCreate(verificationTask,"pm-verify",4096,
+        verification.get(),tskIDLE_PRIORITY+1,nullptr)!=pdPASS) {
+      if(verification->done)vSemaphoreDelete(verification->done);
+      verification.reset();snprintf(reply,cap,"Err verification task allocation");return false;
+    }
+  }
+  // Keep the existing one-command success response, but never hold the loop
+  // indefinitely. A late worker is isolated; all staging mutations stay locked.
+  if(xSemaphoreTake(verification->done,pdMS_TO_TICKS(30000))!=pdTRUE) {
+    snprintf(reply,cap,"Err verification running: %s %lu; check pm ota result",
+      verification->stage,(unsigned long)verification->offset);return false;
+  }
+  const bool ok=verification->ok;
+  session->transfer.verified=ok;
+  lastVerifyStackFree=verification->stackFree;
+  snprintf(lastVerifyReply,sizeof(lastVerifyReply),"%s",verification->reply);
+  snprintf(reply,cap,"%s",lastVerifyReply);
+  vSemaphoreDelete(verification->done);verification.reset();return ok;
 }
 }
 bool otaCommand(const char* command,char* reply,size_t cap,bool local) {
@@ -157,13 +216,23 @@ bool otaCommand(const char* command,char* reply,size_t cap,bool local) {
   char* op=strtok_r(nullptr," ",&state);char* a=strtok_r(nullptr," ",&state);char* b=strtok_r(nullptr," ",&state);char* c=strtok_r(nullptr," ",&state);char* extra=strtok_r(nullptr," ",&state);
   snprintf(reply,cap,"pm ota: status|boot|result|begin|data|verify|apply|cancel|test; pair/trust=USB only. ota test returns the running build marker");
   if(!op||extra)return true;
+  if(verification && strcmp(op,"status") && strcmp(op,"boot") && strcmp(op,"result")
+      && strcmp(op,"test") && strcmp(op,"verify")) {
+    snprintf(reply,cap,"Err verification task pending; use pm ota verify to collect result");return true;
+  }
   if(!strcmp(op,"help")&&!a)return true;
   if(!strcmp(op,"test")&&!a){snprintf(reply,cap,"%s | PM %s | git %s",PM_UPDATE_MARKER,PM_VERSION,PM_SOURCE_SHA);return true;}
   if(!strcmp(op,"boot")&&!a) {
     const auto& b=bootInfo();snprintf(reply,cap,"BL present=%u abi=%u codec=%04x storage=%02x sd=%04x hash=%02x%02x%02x%02x%02x%02x%02x%02x handoff=%02x match=%u",
       b.caps.present,b.caps.apply_abi,b.caps.codec_mask,b.caps.storage_flags,b.sd,b.hash[0],b.hash[1],b.hash[2],b.hash[3],b.hash[4],b.hash[5],b.hash[6],b.hash[7],b.handoff,bootCompatible());return true;
   }
-  if(!strcmp(op,"result")&&!a){snprintf(reply,cap,"%s",applyResult);return true;}
+  if(!strcmp(op,"result")&&!a){
+    if(verification)snprintf(reply,cap,"Verify %s offset=%lu; use pm ota verify <id> to collect result",
+      verification->stage,(unsigned long)verification->offset);
+    else snprintf(reply,cap,"%s; verify_stack_free=%lu; %s",lastVerifyReply,
+      (unsigned long)lastVerifyStackFree,applyResult);
+    return true;
+  }
   if(!strcmp(op,"trust")||!strcmp(op,"pair")) {
     if(!local){snprintf(reply,cap,"Err provisioning is local USB only");return true;}
     if(!a||b)return true;
