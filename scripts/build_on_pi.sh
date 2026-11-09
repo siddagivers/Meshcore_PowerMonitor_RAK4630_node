@@ -18,6 +18,7 @@ if [[ ! -d "$UP/.git" ]];then git clone "$URL" "$UP";fi
 git -C "$UP" fetch origin "$REV"
 git -C "$UP" checkout --detach "$REV"
 git -C "$UP" restore examples/simple_repeater/main.cpp examples/simple_repeater/MyMesh.cpp variants/rak4631/platformio.ini src/Dispatcher.h
+git -C "$UP" restore src/helpers/sensors/EnvironmentSensorManager.cpp
 OTA_ARGS=()
 if [[ "$PROFILE" == official-lora-ota ]];then OTA_ARGS+=(--lora-ota);fi
 python3 "$ROOT/scripts/inject.py" "$UP" --version "$FULL" --source-sha "$SHA" "${OTA_ARGS[@]}"

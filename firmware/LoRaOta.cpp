@@ -250,7 +250,7 @@ bool otaCommand(const char* command,char* reply,size_t cap,bool local) {
   auto& t=session->transfer;
   if(!strcmp(op,"status")&&!a) {
     snprintf(reply,cap,"OTA cli1 pair=%u boot=%u flash=%lu next=%lu/%lu durable=%lu id=%02x%02x%02x%02x verified=%u",
-      paired(),bootCompatible(),(unsigned long)session->store.capacity(),(unsigned long)t.next,(unsigned long)t.total,(unsigned long)t.durable,t.digest[0],t.digest[1],t.digest[2],t.digest[3],t.verified);return true;
+      paired(),bootCompatible(),(unsigned long)(verification?2097152:session->store.capacity()),(unsigned long)t.next,(unsigned long)t.total,(unsigned long)t.durable,t.digest[0],t.digest[1],t.digest[2],t.digest[3],t.verified);return true;
   }
   if(!strcmp(op,"cancel")&&!a) {
     applyAfter=0;applyResult="Activation cancelled by operator";

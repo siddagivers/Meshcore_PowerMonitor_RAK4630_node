@@ -24,6 +24,7 @@ def main():
     root=Path(__file__).resolve().parent.parent
     (args.upstream/'scripts').mkdir(exist_ok=True)
     shutil.copy2(root/'scripts/pm_bounded_wire.py',args.upstream/'scripts/pm_bounded_wire.py')
+    shutil.copy2(root/'scripts/pm_bounded_sensors.py',args.upstream/'scripts/pm_bounded_sensors.py')
     main_file=args.upstream/"examples/simple_repeater/main.cpp"
     text=main_file.read_text()
     text=replace_one(text,'#include "MyMesh.h"',
@@ -51,6 +52,7 @@ def main():
     text=replace_one(text,'  if (the_mesh.getNodePrefs()->powersaving_enabled && !the_mesh.hasPendingWork()) {',
         '  // Continuous power sampling requires MCU uptime.\n  if (false && the_mesh.getNodePrefs()->powersaving_enabled && !the_mesh.hasPendingWork()) {',
         "disable long sleep")
+    text=replace_one(text,'  sensors.begin();','  Serial.println("PM boot: sensors begin");\n  sensors.begin();\n  Serial.println("PM boot: sensors ready");','boot sensor diagnostics')
     main_file.write_text(text)
     mesh_file=main_file.parent/"MyMesh.cpp"
     mesh_text=mesh_file.read_text()
@@ -83,6 +85,11 @@ def main():
 '''
     mesh_text=replace_one(mesh_text,anchor,hook+anchor,"on-demand admin diagnostics")
     mesh_file.write_text(mesh_text)
+    sensors=args.upstream/'src/helpers/sensors/EnvironmentSensorManager.cpp'
+    sensor_text=sensors.read_text()
+    for sensor in ('AHTX0','SHTC3'):
+        sensor_text=replace_one(sensor_text,sensor+'.getEvent(&humidity, &temp);','if(!'+sensor+'.getEvent(&humidity, &temp))return;','sensor failure propagation '+sensor)
+    sensors.write_text(sensor_text)
     for file in ("PowerMonitor.h","PowerMonitor.cpp","EnergyIntegrator.h","SolarHistory.h","PowerTelemetry.h","SensorDecoders.h","BoundedWireWait.h"):
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
     for file in ("LoRaOta.h","LoRaOta.cpp","OtaTransfer.h","OtaBootProfile.h"):
@@ -116,6 +123,7 @@ def main():
         "board_upload.maximum_size = 712704\n"
         "extra_scripts = ${rak4631.extra_scripts}\n"
         "  pre:scripts/pm_bounded_wire.py\n"
+        "  pre:scripts/pm_bounded_sensors.py\n"
         "build_unflags = -Ofast\n"
         "  -D ENV_INCLUDE_INA260=1\n"
         "  -D ENV_INCLUDE_INA219=1\n"

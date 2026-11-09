@@ -236,7 +236,10 @@ bool PowerMonitor::restore() {
     File f=InternalFS.open(slotName(i),FILE_O_READ);
     if(!f)continue;
     Snapshot& s=*storage;
-    const int n=f.read((uint8_t*)&s,sizeof(s));f.close();
+    // Migrate older append-only files: select their newest complete valid record.
+    const uint32_t records=f.size()/sizeof(s);
+    for(uint32_t record=0;record<records;++record) {
+    const int n=f.read((uint8_t*)&s,sizeof(s));
     if(n!=(int)sizeof(s)||s.magic!=SNAP_MAGIC||s.version!=3)continue;
     if(crc32fnv((const uint8_t*)&s,offsetof(Snapshot,crc))!=s.crc)continue;
     if(!valid||(int32_t)(s.sequence-sequence_)>0) {
@@ -245,6 +248,8 @@ bool PowerMonitor::restore() {
       history_.state=s.solar_history;
       utc_day_=s.utc_day;sequence_=s.sequence;valid=true;
     }
+    }
+    f.close();
   }
   if(!valid)return false;
   restores_++;checkpoint_ok_=true;return true;
@@ -260,10 +265,19 @@ bool PowerMonitor::save() {
   s.day_solar=today_solar_;s.day_load=today_load_;
   s.solar_history=history_.state;
   s.crc=crc32fnv((const uint8_t*)&s,offsetof(Snapshot,crc));
-  File f=InternalFS.open(slotName(s.sequence&1U),FILE_O_WRITE);
+  // Keep the other slot intact while replacing this one. FILE_O_WRITE appends.
+  const char* destination=slotName(s.sequence&1U);
+  if(InternalFS.exists(destination) && !InternalFS.remove(destination))return false;
+  File f=InternalFS.open(destination,FILE_O_WRITE);
   if(!f)return false;
   const size_t bytes=f.write((const uint8_t*)&s,sizeof(s));f.close();
   if(bytes!=sizeof(s))return false;
-  sequence_=s.sequence;checkpoint_ok_=true;return true;
+  File check=InternalFS.open(destination,FILE_O_READ);
+  if(!check || check.size()!=sizeof(s)) {check.close();return false;}
+  Snapshot& readback=*storage;
+  const int count=check.read((uint8_t*)&readback,sizeof(readback));check.close();
+  if(count!=(int)sizeof(readback)||readback.sequence!=sequence_+1
+     ||crc32fnv((const uint8_t*)&readback,offsetof(Snapshot,crc))!=readback.crc)return false;
+  sequence_=readback.sequence;checkpoint_ok_=true;return true;
 }
 }
