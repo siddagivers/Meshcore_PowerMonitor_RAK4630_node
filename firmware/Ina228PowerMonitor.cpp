@@ -12,6 +12,7 @@ using namespace Adafruit_LittleFS_Namespace;
 namespace pm {
 namespace {
 constexpr float SHUNT[2]={0.100f,0.100f};
+constexpr uint8_t ADDRESS[2]={0x41,0x40}; // solar, battery
 constexpr uint16_t ADC_CONT=0xBB69,ADC_ONCE=0x3B69; // 1052us VBUS/shunt, averaging 4
 bool readReg(uint8_t address,uint8_t reg,uint32_t& result,unsigned bytes){
   Wire.beginTransmission(address);Wire.write(reg);
@@ -34,11 +35,11 @@ void emit(CayenneLPP& lpp,uint8_t id,float v,float a,float w){
 }
 bool PowerMonitor::configure(unsigned i){
   uint32_t maker,device;
-  if(!readReg(0x40+i,0x3e,maker,2)||maker!=0x5449
-     ||!readReg(0x40+i,0x3f,device,2)||(device>>4)!=0x228)return false;
+  if(!readReg(ADDRESS[i],0x3e,maker,2)||maker!=0x5449
+     ||!readReg(ADDRESS[i],0x3f,device,2)||(device>>4)!=0x228)return false;
   // Explicit normal shunt range (+/-163.84mV). Derive signed current from raw
   // shunt voltage so calibration/current accumulator registers are not required.
-  return writeReg(0x40+i,0,0)&&writeReg(0x40+i,1,inaEnabled_&&channel_[i].continuous?ADC_CONT:0);
+  return writeReg(ADDRESS[i],0,0)&&writeReg(ADDRESS[i],1,inaEnabled_&&channel_[i].continuous?ADC_CONT:0);
 }
 bool PowerMonitor::settings(bool write){
   if(!filesystem_)return false;
@@ -57,7 +58,7 @@ void PowerMonitor::begin(bool fs){
   checkpoint_=millis();
 }
 void PowerMonitor::sample(unsigned i,uint32_t now){
-  auto& c=channel_[i];const uint8_t address=0x40+i;
+  auto& c=channel_[i];const uint8_t address=ADDRESS[i];
   const uint32_t interval=i?300000UL:600000UL;
   if(!c.detected)return;
   if(!c.pending && (int32_t)(now-c.next)<0)return;
@@ -118,7 +119,7 @@ bool PowerMonitor::handleCommand(const char* command,char* out,size_t cap){
     for(unsigned i=0;i<2;i++){
       auto& c=channel_[i];
       if(inaEnabled_)c.detected=configure(i);
-      else if(c.detected&&!writeReg(0x40+i,1,0))ack=false;
+      else if(c.detected&&!writeReg(ADDRESS[i],1,0))ack=false;
       c.valid=false;c.pending=false;c.last=0;c.quiet=0;c.next=millis();
     }
     snprintf(out,cap,"INA %s; setting %s; shutdown %s",inaEnabled_?"enabled":"disabled (no polling)",saveInaEnabled(filesystem_,inaEnabled_)?"saved":"NOT saved",ack?"OK/not needed":"NOT acknowledged");return true;
@@ -127,12 +128,12 @@ bool PowerMonitor::handleCommand(const char* command,char* out,size_t cap){
   if(!strcmp(command,"pm version"))snprintf(out,cap,"power-monitor %s git %s INA228",PM_VERSION,PM_SOURCE_SHA);
   else if(!strcmp(command,"pm channels"))snprintf(out,cap,"100 Solar actual;101 Battery actual;110-113 Solar 5m/15m/1h/UTCday;120-123 Battery same. Analog=W signed;V,A means;%%=measured coverage");
   else if(!strcmp(command,"pm diag"))snprintf(out,cap,"I2C timeouts=%lu last=%s; uptime=%lus",(unsigned long)pmWireTimeoutCount(),pmWireLastTimeoutStage(),(unsigned long)(millis()/1000));
-  else if(!strcmp(command,"pm sensors")||!strcmp(command,"pm status"))snprintf(out,cap,"INA228 solar40:%s %s; battery41:%s %s; errors=%lu/%lu; history=%s",
+  else if(!strcmp(command,"pm sensors")||!strcmp(command,"pm status"))snprintf(out,cap,"INA228 solar41:%s %s; battery40:%s %s; errors=%lu/%lu; history=%s",
     !inaEnabled_?"DISABLED":channel_[0].detected?"OK":"MISSING",channel_[0].continuous?"continuous":"10min idle",!inaEnabled_?"DISABLED":channel_[1].detected?"OK":"MISSING",batteryContinuous_?"continuous":"5min",(unsigned long)channel_[0].errors,(unsigned long)channel_[1].errors,historySaved_?"saved":"not saved yet/FS error");
   else if(!strcmp(command,"pm battery continuous on")||!strcmp(command,"pm battery continuous off")){
     if(!inaEnabled_){snprintf(out,cap,"INA disabled: run pm ina on first");return true;}
     bool desired=!strcmp(command,"pm battery continuous on");
-    if(!writeReg(0x41,1,desired?ADC_CONT:0)){snprintf(out,cap,"Err INA228 write");return true;}
+    if(!writeReg(ADDRESS[1],1,desired?ADC_CONT:0)){snprintf(out,cap,"Err INA228 write");return true;}
     batteryContinuous_=desired;channel_[1].continuous=desired;channel_[1].pending=false;channel_[1].last=0;channel_[1].next=millis();
     snprintf(out,cap,"OK battery %s; setting %s",desired?"continuous":"5-minute single shots",settings(true)?"saved":"not saved");
   }else if(!strcmp(command,"pm solar")||!strcmp(command,"pm load")){

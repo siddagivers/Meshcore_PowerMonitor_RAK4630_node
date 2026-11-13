@@ -12,7 +12,7 @@ inline bool powerHelp(const char* c,char* out,size_t cap,bool ina228){
     "pm ota verify <id>: verify staged image; pm ota apply <id>: verify and activate/reset; pm ota cancel: DISCARD staged image. Use uploader's ID.",
     "pm ota pair RAK4631_RAK15001_C: pair hardware; pm ota trust <signer-key>: trust firmware signer. Both local USB only; pm ota test: build marker.",
     "pm ota begin/data: uploader transport commands; pm ota help: protocol summary. get radio: inspect LoRa settings; reboot: restart device.",
-    "Radio stop: older custom firmware used radio off. This official base has NO radio off command; do not assume it stops forwarding."
+    "radio off 40: pause RF for 40s after 10s/drain; radio off: default 180s; radio on: resume/cancel; radio status: state. USB/sensors stay active."
   };
   const char* extended228[]={
     "pm battery continuous off: five-minute single shots; pm battery continuous on: continuous measurement. Saved choice; pm ina off overrides both.",

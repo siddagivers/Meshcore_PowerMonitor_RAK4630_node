@@ -29,27 +29,42 @@ def main():
     main_file=args.upstream/"examples/simple_repeater/main.cpp"
     text=main_file.read_text()
     text=replace_one(text,'#include "MyMesh.h"',
-        '#include "MyMesh.h"\n#include "PowerMonitor.h"\n#include "LoRaOta.h"\npm::PowerMonitor power_monitor;',
+        '#include "MyMesh.h"\n#include "PowerMonitor.h"\n#include "LoRaOta.h"\n#include "RadioPause.h"\npm::RadioPause pm::radio_pause;\npm::PowerMonitor power_monitor;',
         "main includes")
     text=replace_one(text,'  InternalFS.begin();',
         '  const bool pm_fs_ready=InternalFS.begin();',"filesystem initialization")
     text=replace_one(text,'  the_mesh.begin(fs);',
         '  the_mesh.begin(fs);\n  power_monitor.begin(pm_fs_ready);',"power monitor initialization")
     text=replace_one(text,'    reply[0] = 0;\n#ifdef ETHERNET_ENABLED',
-        '    reply[0] = 0;\n    if (!pm::otaCommand(command,reply,sizeof(reply),true) && !power_monitor.handleCommand(command,reply,sizeof(reply))) {\n#ifdef ETHERNET_ENABLED',"local USB commands")
+        '    reply[0] = 0;\n    if (!pm::radio_pause.command(command,reply,sizeof(reply),millis()) && !pm::otaCommand(command,reply,sizeof(reply),true) && !power_monitor.handleCommand(command,reply,sizeof(reply))) {\n#ifdef ETHERNET_ENABLED',"local USB commands")
     text=replace_one(text,'#endif\n    if (reply[0]) {',
         '#endif\n    }\n    if (reply[0]) {',"local USB command block")
     text=replace_one(text,"  the_mesh.loop();\n  sensors.loop();",
-        "  the_mesh.loop();\n  pm::otaPoll(the_mesh.hasPendingWork());\n  power_monitor.poll(millis(),rtc_clock.getCurrentTime());\n  sensors.loop();",
+        "  const int pm_radio_action=pm::radio_pause.poll(millis(),the_mesh.hasPendingWork() || the_mesh.hasActiveTransmission());\n  if(pm_radio_action==1 && !radio_driver.pmSuspend()) { pm::radio_pause.paused=false; pm::radio_pause.failed=true; radio_driver.pmResume(); }\n  if(pm_radio_action==2 && !radio_driver.pmResume()) { pm::radio_pause.paused=true; pm::radio_pause.failed=true; pm::radio_pause.until=millis()+1000; }\n  if(!pm::radio_pause.paused)the_mesh.loop();\n  pm::otaPoll(the_mesh.hasPendingWork());\n  power_monitor.poll(millis(),rtc_clock.getCurrentTime());\n  sensors.loop();",
         "sensor polling")
     if args.lora_ota:
         text=text.replace('pm::otaPoll(the_mesh.hasPendingWork());',
             'pm::otaPoll(the_mesh.hasPendingWork() || the_mesh.hasActiveTransmission());')
-        dispatch=args.upstream/"src/Dispatcher.h"
-        dispatch.write_text(replace_one(dispatch.read_text(),
-            'public:\n  void begin();\n  void loop();',
-            'public:\n  bool hasActiveTransmission() const { return outbound != nullptr; }\n  void begin();\n  void loop();',
-            'OTA in-flight transmission accessor'))
+    dispatch=args.upstream/"src/Dispatcher.h"
+    dispatch.write_text(replace_one(dispatch.read_text(),
+        'public:\n  void begin();\n  void loop();',
+        'public:\n  bool hasActiveTransmission() const { return outbound != nullptr; }\n  void begin();\n  void loop();',
+        'in-flight transmission accessor'))
+    wrapper=args.upstream/'src/helpers/radiolib/RadioLibWrappers.h'
+    wrapper.write_text(replace_one(wrapper.read_text(),'  void begin() override;',
+        '  void begin() override;\n  bool pmSuspend();\n  bool pmResume();','radio pause interface'))
+    wrapper=args.upstream/'src/helpers/radiolib/RadioLibWrappers.cpp'
+    wrapper.write_text(wrapper.read_text()+'''\n// PowerMonitor timed RF pause: warm sleep retains configured modulation.
+bool RadioLibWrapper::pmSuspend() {
+  int result=_radio->standby(); state=STATE_IDLE;
+  if(result!=RADIOLIB_ERR_NONE)return false;
+  return _radio->sleep()==RADIOLIB_ERR_NONE;
+}
+bool RadioLibWrapper::pmResume() {
+  int result=_radio->standby(); state=STATE_IDLE;
+  return result==RADIOLIB_ERR_NONE;
+}
+''')
     text=replace_one(text,'  if (the_mesh.getNodePrefs()->powersaving_enabled && !the_mesh.hasPendingWork()) {',
         '  // Continuous power sampling requires MCU uptime.\n  if (false && the_mesh.getNodePrefs()->powersaving_enabled && !the_mesh.hasPendingWork()) {',
         "disable long sleep")
@@ -58,7 +73,7 @@ def main():
     mesh_file=main_file.parent/"MyMesh.cpp"
     mesh_text=mesh_file.read_text()
     mesh_text=replace_one(mesh_text,'#include "MyMesh.h"',
-        '#include "MyMesh.h"\n#include "PowerMonitor.h"\n#include "LoRaOta.h"\nextern pm::PowerMonitor power_monitor;',
+        '#include "MyMesh.h"\n#include "PowerMonitor.h"\n#include "LoRaOta.h"\n#include "RadioPause.h"\nextern pm::PowerMonitor power_monitor;',
         "telemetry includes")
     mesh_text=replace_one(mesh_text,'    sensors.querySensors(perm_mask, telemetry);',
         '    power_monitor.appendTelemetry(telemetry,perm_mask);\n    sensors.querySensors(perm_mask, telemetry);',
@@ -68,7 +83,8 @@ def main():
     # denied here even if a remote sender supplies a zero timestamp; only the
     # direct local USB hook above can reset energy counters.
     anchor='  // handle ACL related commands\n'
-    hook='''  if (!strcmp(command,"help") || !strcmp(command,"help pm")) {
+    hook='''  if(pm::radio_pause.command(command,reply,153,millis()))return;
+  if (!strcmp(command,"help") || !strcmp(command,"help pm")) {
     power_monitor.handleCommand(command,reply,153);return;
   }
   if (!strcmp(command,"ota test")) {
@@ -95,7 +111,7 @@ def main():
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
     for file in ("LoRaOta.h","LoRaOta.cpp","OtaTransfer.h","OtaBootProfile.h"):
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
-    for file in ('PowerMonitorHelp.h','InaEnable.h'):
+    for file in ('PowerMonitorHelp.h','InaEnable.h','RadioPause.h'):
         shutil.copyfile(root/'firmware'/file,main_file.parent/file)
     if os.environ.get('PM_INA228')=='1':
         shutil.copyfile(root/'firmware/Ina228PowerMonitor.h',main_file.parent/'PowerMonitor.h')
