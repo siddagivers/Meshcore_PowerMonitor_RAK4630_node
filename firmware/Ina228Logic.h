@@ -25,22 +25,23 @@ struct Ina228Mean {
 };
 struct Ina228History {
   struct Bucket {uint32_t minute=0;Ina228Mean mean;};
-  Bucket buckets[61];
+  Bucket buckets[121];
   uint32_t day=0,lastUtc=0;Ina228Mean today;
   void add(uint32_t utc,float v,float a,float w,uint32_t dt){
     if(utc<1700000000 || !dt)return;
     if(lastUtc && utc<lastUtc){for(auto& b:buckets)b=Bucket{};today=Ina228Mean{};day=0;}
     lastUtc=utc;
     if(day!=utc/86400){day=utc/86400;today=Ina228Mean{};}
-    const uint32_t minute=utc/60;auto& b=buckets[minute%61];
+    const uint32_t minute=utc/30;auto& b=buckets[minute%121];
     if(b.minute!=minute){b.minute=minute;b.mean=Ina228Mean{};}
     b.mean.add(v,a,w,dt);today.add(v,a,w,dt);
   }
   Ina228Mean get(uint32_t utc,unsigned seconds)const{
     Ina228Mean out;
     if(!seconds)return day==utc/86400?today:out;
-    // Include only complete buckets entirely within the requested window.
-    for(const auto& b:buckets)if(b.minute && b.minute*60>=utc-seconds && b.minute*60+60<=utc)out.merge(b.mean);
+    // Exclude the oldest partially overlapping 30-second bucket. The current
+    // bucket contains observations only up to now and can safely be included.
+    for(const auto& b:buckets)if(b.minute && b.minute*30>=utc-seconds && b.minute*30<=utc)out.merge(b.mean);
     return out;
   }
 };
