@@ -4,6 +4,7 @@ from pathlib import Path
 import argparse
 import re
 import shutil
+import os
 
 def replace_one(source, anchor, replacement, label):
     count = source.count(anchor)
@@ -94,6 +95,10 @@ def main():
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
     for file in ("LoRaOta.h","LoRaOta.cpp","OtaTransfer.h","OtaBootProfile.h"):
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
+    if os.environ.get('PM_INA228')=='1':
+        shutil.copyfile(root/'firmware/Ina228PowerMonitor.h',main_file.parent/'PowerMonitor.h')
+        shutil.copyfile(root/'firmware/Ina228PowerMonitor.cpp',main_file.parent/'PowerMonitor.cpp')
+        shutil.copyfile(root/'firmware/Ina228Logic.h',main_file.parent/'Ina228Logic.h')
     ota_dest=args.upstream/"src/helpers/pm_ota"
     if ota_dest.exists():shutil.rmtree(ota_dest)
     if args.lora_ota:
