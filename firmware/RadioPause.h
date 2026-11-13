@@ -13,7 +13,8 @@ public:
     if(!strcmp(c,"radio status")){
       if(failed)snprintf(out,cap,"Radio pause/resume error; inspect locally; radio on retries resume");
       else if(paused)snprintf(out,cap,"Radio OFF; auto-resume in %lus",(unsigned long)((int32_t)(until-now)>0?(uint32_t)(until-now)/1000:0));
-      else snprintf(out,cap,"Radio ON%s",armed?"; pause pending (10s delay, waiting for traffic to drain)":"");return true;}
+      else snprintf(out,cap,"Radio ON%s",armed?"; pause pending (10s delay, waiting for traffic to drain)":"");
+      return true;}
     if(!strcmp(c,"radio help")){snprintf(out,cap,"radio off [1..86400 seconds] (default 180): pause after 10s/drain; radio on: resume/cancel; radio status. USB remains active.");return true;}
     if(strncmp(c,"radio off",9)|| (c[9]&&c[9]!=' '))return false;
     unsigned long seconds=180;char extra;
