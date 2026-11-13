@@ -1,14 +1,18 @@
 # Dual INA228 test profile
 
-Build using `PM_INA228=1 PM_BUILD_SUFFIX=ina228-test.1 bash scripts/build_on_pi.sh official-lora-ota`
+Build using `PM_INA228=1 PM_BUILD_SUFFIX=ina228-test.2 bash scripts/build_on_pi.sh official-lora-ota`
 inside the normal Pi build virtualenv. Official MeshCore remains pinned to
 81dbae592ffad40b4212bc0b37e82b38da08f4bc (v1.18.0).
 The legacy INA219 profile remains the default when PM_INA228 is absent.
 
 ## Hardware
 
-Two genuine INA228 devices, solar 0x40 and battery 0x41, R100 = 0.100 ohm
+In test.2 and later: two genuine INA228 devices, battery 0x40 and solar 0x41, R100 = 0.100 ohm
 shunts on both. Share ground/SDA/SCL and use 3.3-V-compatible I2C pull-ups.
+Test.1 used the opposite mapping; install the correct version for your wiring.
+Battery 0x40: A1=GND, A0=GND. Solar 0x41: A1=GND, A0=VS (logic supply).
+Do not tie A0 to VS while a ground strap is still fitted; inspect the board's
+jumper topology before changing solder bridges. Do not leave address pins floating.
 Raw manufacturer/device IDs are checked before configuration; INA219, INA226
 and INA238 are not interchangeable. Conflicting stock power-sensor probes
 are disabled. MCP9808 is not part of this test profile. Stock environmental
@@ -28,6 +32,9 @@ Source: https://www.ti.com/lit/ds/symlink/ina228.pdf
 ## Sampling modes
 
 Battery defaults to continuous ADC conversion, host observations every 20 ms.
+From test.2, `pm ina off` requests shutdown and disables automatic INA access;
+`pm ina on` restores it. This separate saved enable setting overrides both
+sampling modes; see PM_COMMANDS.md for described help and timed radio pause.
 `pm battery continuous off` selects one triggered conversion every 5 minutes;
 the INA228 returns to ADC shutdown between conversions. `pm battery continuous on`
 restores continuous conversion. The choice is stored separately in InternalFS.
