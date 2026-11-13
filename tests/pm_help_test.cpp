@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstring>
+#include <initializer_list>
 int main(){
  for(bool profile:{false,true}){
   char command[32],full[512],remote[153];

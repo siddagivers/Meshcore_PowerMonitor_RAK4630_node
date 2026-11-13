@@ -119,6 +119,7 @@ void PowerMonitor::readMcp() {
   mcp_temperature_=temperature;
 }
 void PowerMonitor::summary(char* out,size_t cap) const {
+  if(!ina_enabled_){snprintf(out,cap,"INA sensors disabled; no new readings. pm ina on enables them; history retained.");return;}
   snprintf(out,cap,"S=%.4f/%.4fmWh L=%.4f/%.4fmWh V=%.2f/%.2f I=%.1f/%.1fmA",
       solar_.counter.window_mwh,solar_.counter.total_mwh,
       load_.counter.window_mwh,load_.counter.total_mwh,
