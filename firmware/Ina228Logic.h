@@ -24,21 +24,26 @@ struct Ina228Mean {
   float w()const{return ms?ws/ms:NAN;}
 };
 struct Ina228History {
+  struct DayMean {
+    double vs=0,as=0,ws=0;uint32_t ms=0;
+    void add(float v,float a,float w,uint32_t dt){vs+=(double)v*dt;as+=(double)a*dt;ws+=(double)w*dt;ms+=dt;}
+    Ina228Mean result()const{Ina228Mean out;out.vs=vs;out.as=as;out.ws=ws;out.ms=ms;return out;}
+  };
   struct Bucket {uint32_t minute=0;Ina228Mean mean;};
   Bucket buckets[121];
-  uint32_t day=0,lastUtc=0;Ina228Mean today;
+  uint32_t day=0,lastUtc=0;DayMean today;
   void add(uint32_t utc,float v,float a,float w,uint32_t dt){
     if(utc<1700000000 || !dt)return;
-    if(lastUtc && utc<lastUtc){for(auto& b:buckets)b=Bucket{};today=Ina228Mean{};day=0;}
+    if(lastUtc && utc<lastUtc){for(auto& b:buckets)b=Bucket{};today=DayMean{};day=0;}
     lastUtc=utc;
-    if(day!=utc/86400){day=utc/86400;today=Ina228Mean{};}
+    if(day!=utc/86400){day=utc/86400;today=DayMean{};}
     const uint32_t minute=utc/30;auto& b=buckets[minute%121];
     if(b.minute!=minute){b.minute=minute;b.mean=Ina228Mean{};}
     b.mean.add(v,a,w,dt);today.add(v,a,w,dt);
   }
   Ina228Mean get(uint32_t utc,unsigned seconds)const{
     Ina228Mean out;
-    if(!seconds)return day==utc/86400?today:out;
+    if(!seconds)return day==utc/86400?today.result():out;
     // Exclude the oldest partially overlapping 30-second bucket. The current
     // bucket contains observations only up to now and can safely be included.
     for(const auto& b:buckets)if(b.minute && b.minute*30>=utc-seconds && b.minute*30<=utc)out.merge(b.mean);

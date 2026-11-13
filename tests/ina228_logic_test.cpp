@@ -20,5 +20,8 @@ int main(){
  auto day=history.get(utc+60,0);assert(day.ms==60000);
  history.add(utc+86400,5,.2,1,20);assert(history.get(utc+86400,0).ms==20);
  history.add(utc,4,.1,.4,20);assert(history.get(utc,0).ms==20);
- puts("PASS INA228 signed ADC, units, polarity, saturation, solar hysteresis, weighted histories, gaps, UTC rollover/rollback");
+ Ina228History longday;uint32_t start=1700000000/86400*86400;
+ for(unsigned i=0;i<4000000;i++)longday.add(start+i/50,4,.031f,.124f,20);
+ assert(fabs(longday.get(start+80000,0).w()-.124)<.000001);
+ puts("PASS INA228 signed ADC, units, polarity, saturation, solar hysteresis, weighted histories, gaps, UTC rollover/rollback and full-day precision");
 }
