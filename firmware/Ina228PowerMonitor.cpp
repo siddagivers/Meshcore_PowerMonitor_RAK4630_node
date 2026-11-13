@@ -136,6 +136,7 @@ bool PowerMonitor::handleCommand(const char* command,char* out,size_t cap){
     batteryContinuous_=desired;channel_[1].continuous=desired;channel_[1].pending=false;channel_[1].last=0;channel_[1].next=millis();
     snprintf(out,cap,"OK battery %s; setting %s",desired?"continuous":"5-minute single shots",settings(true)?"saved":"not saved");
   }else if(!strcmp(command,"pm solar")||!strcmp(command,"pm load")){
+    if(!inaEnabled_){snprintf(out,cap,"INA disabled; run pm ina on to resume readings");return true;}
     unsigned i=!strcmp(command,"pm load");const auto& c=channel_[i];
     if(c.valid)snprintf(out,cap,"%s INA228: %.4fV %.6fA %.6fW age=%lus %s",i?"Battery +charge/-discharge":"Solar",c.v,c.a,c.w,(unsigned long)((millis()-c.last)/1000),c.continuous?"continuous":"single shot");
     else snprintf(out,cap,"No valid INA228 observation");

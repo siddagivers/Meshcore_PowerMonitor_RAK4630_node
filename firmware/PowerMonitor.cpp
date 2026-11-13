@@ -208,6 +208,7 @@ bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
   else if(!strcmp(c,"pm channels"))
     snprintf(out,cap,"100 Solar;101 Battery(+charge/-discharge);102 Temp;110 Solar15m;111 Solar1h;112 TodayUTC;113 YesterdayUTC. Current=A;Analog=signed W;Power=abs W;Generic=mWh");
   else if(!strcmp(c,"pm solar")||!strcmp(c,"pm load")) {
+    if(!ina_enabled_){snprintf(out,cap,"INA disabled; run pm ina on to resume readings");return true;}
     const bool solar=!strcmp(c,"pm solar");const auto& ch=solar?solar_:load_;
     if(!ch.valid)snprintf(out,cap,"%s INA219 0x%02X: %s; read_errors=%lu. Run pm i2c; check address/wiring.",
       solar?"Solar":"Battery",ch.address,ch.detected?"READ ERROR":"MISSING",(unsigned long)ch.failures);
