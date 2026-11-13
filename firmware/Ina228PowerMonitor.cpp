@@ -1,6 +1,7 @@
 #include "PowerMonitor.h"
 #include <InternalFileSystem.h>
 #include <Mesh.h>
+#include <helpers/SensorManager.h>
 #include <memory>
 #include <new>
 #include <stdio.h>
@@ -48,7 +49,7 @@ bool PowerMonitor::settings(bool write){
   int value=f.read();f.close();if(value!=0&&value!=1)return false;batteryContinuous_=value==1;return true;
 }
 void PowerMonitor::begin(bool fs){
-  filesystem_=fs;settings(false);restore();
+  filesystem_=fs;settings(false);historySaved_=restore();
   channel_[0].continuous=false;channel_[1].continuous=batteryContinuous_;
   for(unsigned i=0;i<2;i++)channel_[i].detected=configure(i);
   checkpoint_=millis();
@@ -90,7 +91,7 @@ void PowerMonitor::poll(uint32_t now,uint32_t utc){
   if((uint32_t)(now-probe_)>=10000){probe_=now;
     for(unsigned i=0;i<2;i++)if(!channel_[i].detected){channel_[i].detected=configure(i);channel_[i].pending=false;channel_[i].next=now;}}
   sample(0,now);sample(1,now);
-  if(filesystem_&&(uint32_t)(now-checkpoint_)>=900000){checkpoint_=now;save();}
+  if(filesystem_&&(uint32_t)(now-checkpoint_)>=900000){checkpoint_=now;historySaved_=save();}
 }
 void PowerMonitor::appendTelemetry(CayenneLPP& lpp,uint8_t permissions)const{
   if(!(permissions&TELEM_PERM_ENVIRONMENT))return;
@@ -98,7 +99,7 @@ void PowerMonitor::appendTelemetry(CayenneLPP& lpp,uint8_t permissions)const{
   // Stock sensor additions remain subject to Cayenne buffer checks.
   const unsigned windows[]={300,900,3600,0};
   for(unsigned i=0;i<2;i++){
-    const auto& c=channel_[i];if(c.valid)emit(lpp,100+i,c.v,c.a,c.w);
+    const auto& c=channel_[i];if(c.valid){emit(lpp,100+i,c.v,c.a,c.w);lpp.addGenericSensor(100+i,(millis()-c.last)/1000);}
     for(unsigned j=0;j<4;j++){
       auto mean=history_[i].get(utc_,windows[j]);uint8_t id=110+i*10+j;
       if(mean.ms)emit(lpp,id,mean.v(),mean.a(),mean.w());
@@ -115,7 +116,7 @@ bool PowerMonitor::handleCommand(const char* command,char* out,size_t cap){
   else if(!strcmp(command,"pm channels"))snprintf(out,cap,"100 Solar actual;101 Battery actual;110-113 Solar 5m/15m/1h/UTCday;120-123 Battery same. Analog=W signed;V,A means;%%=measured coverage");
   else if(!strcmp(command,"pm diag"))snprintf(out,cap,"I2C timeouts=%lu last=%s; uptime=%lus",(unsigned long)pmWireTimeoutCount(),pmWireLastTimeoutStage(),(unsigned long)(millis()/1000));
   else if(!strcmp(command,"pm sensors")||!strcmp(command,"pm status"))snprintf(out,cap,"INA228 solar40:%s %s; battery41:%s %s; errors=%lu/%lu; history=%s",
-    channel_[0].detected?"OK":"MISSING",channel_[0].continuous?"continuous":"10min idle",channel_[1].detected?"OK":"MISSING",batteryContinuous_?"continuous":"5min",(unsigned long)channel_[0].errors,(unsigned long)channel_[1].errors,filesystem_?"enabled":"RAM only");
+    channel_[0].detected?"OK":"MISSING",channel_[0].continuous?"continuous":"10min idle",channel_[1].detected?"OK":"MISSING",batteryContinuous_?"continuous":"5min",(unsigned long)channel_[0].errors,(unsigned long)channel_[1].errors,historySaved_?"saved":"not saved yet/FS error");
   else if(!strcmp(command,"pm battery continuous on")||!strcmp(command,"pm battery continuous off")){
     bool desired=!strcmp(command,"pm battery continuous on");
     if(!writeReg(0x41,1,desired?ADC_CONT:0)){snprintf(out,cap,"Err INA228 write");return true;}
