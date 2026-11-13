@@ -160,6 +160,9 @@ def main():
 build_src_filter = ${env:RAK_4631_repeater.build_src_filter}
   +<helpers/pm_ota/>
 ''')
+    if os.environ.get('PM_INA228')=='1':
+        ini.write_text(ini.read_text().replace('  -DENV_INCLUDE_INA219=0\n',
+            '  -DENV_INCLUDE_INA219=0\n  -DENV_INCLUDE_INA226=0\n  -DENV_INCLUDE_INA3221=0\n'))
     print("Patched official MeshCore",args.version,"LoRa OTA:",args.lora_ota,args.upstream)
 
 if __name__=="__main__":
