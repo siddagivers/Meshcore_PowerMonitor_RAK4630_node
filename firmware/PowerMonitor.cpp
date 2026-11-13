@@ -1,6 +1,8 @@
 #include "PowerMonitor.h"
 #include "PowerTelemetry.h"
 #include "SensorDecoders.h"
+#include "PowerMonitorHelp.h"
+#include "InaEnable.h"
 #include <Mesh.h>
 #include <Adafruit_LittleFS.h>
 #include <InternalFileSystem.h>
@@ -61,13 +63,14 @@ bool PowerMonitor::write16(uint8_t a,uint8_t reg,uint16_t v) {
 }
 void PowerMonitor::begin(bool allow_checkpoint) {
   checkpoint_enabled_=allow_checkpoint;
+  ina_enabled_=loadInaEnabled(allow_checkpoint);
   // Shared I2C bus is initialized by MeshCore sensors.begin() before us.
   solar_.address=SOLAR; solar_.shunt_ohms=PM_SOLAR_SHUNT_OHMS;
   solar_.sign=PM_SOLAR_SIGN<0?-1:1;
   load_.address=LOAD;load_.shunt_ohms=PM_LOAD_SHUNT_OHMS;
   load_.sign=PM_LOAD_SIGN<0?-1:1;
-  solar_.detected=probe(SOLAR)&&write16(SOLAR,INA_CFG,INA_CONTINUOUS);
-  load_.detected=probe(LOAD)&&write16(LOAD,INA_CFG,INA_CONTINUOUS);
+  solar_.detected=probe(SOLAR)&&write16(SOLAR,INA_CFG,ina_enabled_?INA_CONTINUOUS:0x3998);
+  load_.detected=probe(LOAD)&&write16(LOAD,INA_CFG,ina_enabled_?INA_CONTINUOUS:0x3998);
   detectMcp();
   if(mcp_found_) readMcp();
   const uint32_t now=millis();
@@ -146,8 +149,8 @@ void PowerMonitor::poll(uint32_t now,uint32_t utc) {
   utc_=utc;
   if((uint32_t)(now-next_probe_)>=5000UL) {
     next_probe_=now;
-    if(!solar_.detected)solar_.detected=probe(SOLAR)&&write16(SOLAR,INA_CFG,INA_CONTINUOUS);
-    if(!load_.detected)load_.detected=probe(LOAD)&&write16(LOAD,INA_CFG,INA_CONTINUOUS);
+    if(ina_enabled_&&!solar_.detected)solar_.detected=probe(SOLAR)&&write16(SOLAR,INA_CFG,INA_CONTINUOUS);
+    if(ina_enabled_&&!load_.detected)load_.detected=probe(LOAD)&&write16(LOAD,INA_CFG,INA_CONTINUOUS);
     if(!mcp_found_){detectMcp();if(mcp_found_)readMcp();}
   }
   const uint32_t old_day=history_.state.day;
@@ -159,7 +162,7 @@ void PowerMonitor::poll(uint32_t now,uint32_t utc) {
   }
   if((uint32_t)(now-next_sample_)>=PM_SAMPLE_MS) {
     next_sample_=now;
-    sample(solar_,utc);sample(load_,utc);
+    if(ina_enabled_){sample(solar_,utc);sample(load_,utc);}
   }
   if((uint32_t)(now-next_temperature_)>=PM_TEMPERATURE_MS) {
     next_temperature_=now;if(mcp_found_)readMcp();
@@ -176,8 +179,16 @@ void PowerMonitor::clear() {
   if(checkpoint_enabled_)save();
 }
 bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
-  if(!strcmp(c,"help")||!strcmp(c,"help pm")) {
-    snprintf(out,cap,"PowerMonitor: pm help; pm diag; pm ota help; pm ota boot; ota test (running build marker); pm version. Sensor/energy commands: pm help");return true;
+  if(powerHelp(c,out,cap,false))return true;
+  if(!strcmp(c,"pm ina off")||!strcmp(c,"pm ina on")){
+    ina_enabled_=!strcmp(c,"pm ina on");bool ack=true;
+    Channel* channels[]={&solar_,&load_};
+    for(auto* ch:channels){
+      if(ina_enabled_)ch->detected=probe(ch->address)&&write16(ch->address,INA_CFG,INA_CONTINUOUS);
+      else if(ch->detected && !write16(ch->address,INA_CFG,0x3998))ack=false;
+      ch->valid=false;ch->counter.gap(millis());
+    }
+    snprintf(out,cap,"INA %s; setting %s; shutdown %s",ina_enabled_?"enabled":"disabled (no polling)",saveInaEnabled(checkpoint_enabled_,ina_enabled_)?"saved":"NOT saved",ack?"OK/not needed":"NOT acknowledged");return true;
   }
   if(strncmp(c,"pm",2)!=0 || (c[2]&&c[2]!=' '))return false;
   if(!strcmp(c,"pm")||!strcmp(c,"pm status"))summary(out,cap);
@@ -186,7 +197,7 @@ bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
       (unsigned long)pmWireTimeoutCount(),pmWireLastTimeoutStage(),(unsigned long)(millis()/1000));
   else if(!strcmp(c,"pm sensors"))
     snprintf(out,cap,"solar40:%s load41:%s mcp18:%s T=%.2fC errs=%lu/%lu cov=%u/%u%%",
-      solar_.detected?"OK":"MISSING",load_.detected?"OK":"MISSING",
+      !ina_enabled_?"DISABLED":solar_.detected?"OK":"MISSING",!ina_enabled_?"DISABLED":load_.detected?"OK":"MISSING",
       mcp_found_?"OK":mcp_ack_?"WRONG_ID/IO":"MISSING",mcp_temperature_,
       (unsigned long)solar_.failures,(unsigned long)load_.failures,
       solar_.counter.coverage(),load_.counter.coverage());
@@ -207,7 +218,7 @@ bool PowerMonitor::handleCommand(const char* c,char* out,size_t cap) {
       mcp_found_?"IDENTIFIED":mcp_ack_?"WRONG_ID/IO":"MISSING",mcp_temperature_,mcp_manufacturer_,mcp_device_,mcp_raw_);
   else if(!strcmp(c,"pm i2c")) {
     size_t n=(size_t)snprintf(out,cap,"I2C ACK:");
-    for(uint8_t a=8;a<0x78 && n+6<cap;a++)if(probe(a))n+=(size_t)snprintf(out+n,cap-n," %02X",a);
+    for(uint8_t a=8;a<0x78 && n+6<cap;a++)if((ina_enabled_||(a!=SOLAR&&a!=LOAD))&&probe(a))n+=(size_t)snprintf(out+n,cap-n," %02X",a);
   }
   else if(!strcmp(c,"pm solar 15m")||!strcmp(c,"pm solar 1h")
        ||!strcmp(c,"pm solar today")||!strcmp(c,"pm solar yesterday")) {

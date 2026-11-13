@@ -54,6 +54,7 @@ private:
     Integrator counter;
   };
   Channel solar_, load_;
+  bool ina_enabled_=true;
   bool checkpoint_enabled_ = false, mcp_found_ = false, checkpoint_ok_ = false;
   bool mcp_ack_ = false;
   uint16_t mcp_manufacturer_=0, mcp_device_=0, mcp_raw_=0;

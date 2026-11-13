@@ -12,7 +12,7 @@ public:
   bool checkpointNow(){return save();}
 private:
   Ina228Schedule channel_[2];Ina228History history_[2];
-  bool filesystem_=false,batteryContinuous_=true,historySaved_=false;uint32_t utc_=0,checkpoint_=0,sequence_=0,probe_=0;
+  bool filesystem_=false,batteryContinuous_=true,historySaved_=false,inaEnabled_=true;uint32_t utc_=0,checkpoint_=0,sequence_=0,probe_=0;
   bool save();bool restore();bool settings(bool write);
   bool configure(unsigned);void sample(unsigned,uint32_t);
 };

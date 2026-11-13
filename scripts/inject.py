@@ -95,6 +95,8 @@ def main():
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
     for file in ("LoRaOta.h","LoRaOta.cpp","OtaTransfer.h","OtaBootProfile.h"):
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
+    for file in ('PowerMonitorHelp.h','InaEnable.h'):
+        shutil.copyfile(root/'firmware'/file,main_file.parent/file)
     if os.environ.get('PM_INA228')=='1':
         shutil.copyfile(root/'firmware/Ina228PowerMonitor.h',main_file.parent/'PowerMonitor.h')
         shutil.copyfile(root/'firmware/Ina228PowerMonitor.cpp',main_file.parent/'PowerMonitor.cpp')
