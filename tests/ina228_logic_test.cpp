@@ -13,6 +13,7 @@ int main(){
  Ina228Schedule solar;solar.continuous=false;solar.a=.003;solar.solarDecision(100);assert(solar.continuous);
  solar.a=0;solar.solarDecision(200);solar.solarDecision(30199);assert(solar.continuous);
  solar.solarDecision(30200);assert(!solar.continuous);
+ solar.a=-.003f;solar.solarDecision(30300);assert(solar.continuous);
  Ina228History history;uint32_t utc=1700000040;utc-=utc%60;
  for(unsigned i=0;i<3000;i++)history.add(utc+i/50,4,.1,.4,20);
  auto mean=history.get(utc+60,300);assert(mean.ms==60000&&fabs(mean.w()-.4)<.001);

@@ -54,9 +54,9 @@ struct Ina228Schedule {
   bool continuous=true,pending=false,valid=false,detected=false;
   uint32_t next=0,triggered=0,last=0,quiet=0;float v=NAN,a=NAN,w=NAN;uint32_t errors=0;
   void solarDecision(uint32_t now){
-    if(!continuous && a>=0.002f){continuous=true;quiet=0;}
+    if(!continuous && fabsf(a)>=0.002f){continuous=true;quiet=0;}
     else if(continuous){
-      if(a>0.0005f)quiet=0;
+      if(fabsf(a)>0.0005f)quiet=0;
       else if(!quiet)quiet=now;
       else if((uint32_t)(now-quiet)>=30000){continuous=false;quiet=0;}
     }
