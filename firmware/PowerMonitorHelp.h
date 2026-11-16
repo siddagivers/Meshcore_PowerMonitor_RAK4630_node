@@ -28,9 +28,10 @@ inline bool powerHelp(const char* c,char* out,size_t cap,bool ina228){
   };
   unsigned page=0;char extra;
   if(!strcmp(c,"help")||!strcmp(c,"help pm")||!strcmp(c,"pm help")){
-    snprintf(out,cap,"PowerMonitor help: pm help 1..12 (one described page per reply). 1 diagnostics;2 INA enable;3 readings;4-7 OTA/radio;8 radio stop;9-12 profile.");return true;
+    snprintf(out,cap,"pm help 1..13: 1 diagnostics;2 INA enable;3 readings;4-7 OTA;8 radio pause;9-12 profile;13 telemetry pages. One described page per reply.");return true;
   }
-  if(sscanf(c,"pm help %u %c",&page,&extra)!=1||page<1||page>12){snprintf(out,cap,"Use pm help or pm help 1..12");return true;}
+  if(sscanf(c,"pm help %u %c",&page,&extra)!=1||page<1||page>13){snprintf(out,cap,"Use pm help or pm help 1..13");return true;}
+  if(page==13){snprintf(out,cap,"pm telemetry live/power/environment: choose app data; live=latest+env; power=INA history; environment=env. pm telemetry status: current page.");return true;}
   snprintf(out,cap,"%s",page<=8?common[page-1]:(ina228?extended228[page-9]:extended219[page-9]));return true;
 }
 }

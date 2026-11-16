@@ -6,7 +6,7 @@
 int main(){
  for(bool profile:{false,true}){
   char command[32],full[512],remote[153];
-  for(unsigned i=1;i<=12;i++){
+  for(unsigned i=1;i<=13;i++){
    snprintf(command,sizeof(command),"pm help %u",i);
    assert(pm::powerHelp(command,full,sizeof(full),profile));
    if(strlen(full)>152){printf("Help page too long: %u, %zu bytes\n",i,strlen(full));return 1;}

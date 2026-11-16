@@ -1,6 +1,7 @@
 #include "PowerMonitor.h"
 #include "PowerMonitorHelp.h"
 #include "InaEnable.h"
+#include "TelemetryPage.h"
 #include <InternalFileSystem.h>
 #include <Mesh.h>
 #include <helpers/SensorManager.h>
@@ -104,6 +105,7 @@ void PowerMonitor::appendTelemetry(CayenneLPP& lpp,uint8_t permissions)const{
   const unsigned windows[]={300,900,3600,0};
   for(unsigned i=0;i<2;i++){
     const auto& c=channel_[i];if(c.valid){emit(lpp,100+i,c.v,c.a,c.w);lpp.addGenericSensor(100+i,(millis()-c.last)/1000);}
+    if(telemetry_page.live())continue;
     for(unsigned j=0;j<4;j++){
       auto mean=history_[i].get(utc_,windows[j]);uint8_t id=110+i*10+j;
       if(mean.ms)emit(lpp,id,mean.v(),mean.a(),mean.w());

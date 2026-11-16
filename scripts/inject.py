@@ -29,14 +29,14 @@ def main():
     main_file=args.upstream/"examples/simple_repeater/main.cpp"
     text=main_file.read_text()
     text=replace_one(text,'#include "MyMesh.h"',
-        '#include "MyMesh.h"\n#include "PowerMonitor.h"\n#include "LoRaOta.h"\n#include "RadioPause.h"\npm::RadioPause pm::radio_pause;\npm::PowerMonitor power_monitor;',
+        '#include "MyMesh.h"\n#include "PowerMonitor.h"\n#include "LoRaOta.h"\n#include "RadioPause.h"\n#include "TelemetryPage.h"\npm::RadioPause pm::radio_pause;\npm::TelemetryPage pm::telemetry_page;\npm::PowerMonitor power_monitor;',
         "main includes")
     text=replace_one(text,'  InternalFS.begin();',
         '  const bool pm_fs_ready=InternalFS.begin();',"filesystem initialization")
     text=replace_one(text,'  the_mesh.begin(fs);',
         '  the_mesh.begin(fs);\n  power_monitor.begin(pm_fs_ready);',"power monitor initialization")
     text=replace_one(text,'    reply[0] = 0;\n#ifdef ETHERNET_ENABLED',
-        '    reply[0] = 0;\n    if (!pm::radio_pause.command(command,reply,sizeof(reply),millis()) && !pm::otaCommand(command,reply,sizeof(reply),true) && !power_monitor.handleCommand(command,reply,sizeof(reply))) {\n#ifdef ETHERNET_ENABLED',"local USB commands")
+        '    reply[0] = 0;\n    if (!pm::telemetry_page.command(command,reply,sizeof(reply)) && !pm::radio_pause.command(command,reply,sizeof(reply),millis()) && !pm::otaCommand(command,reply,sizeof(reply),true) && !power_monitor.handleCommand(command,reply,sizeof(reply))) {\n#ifdef ETHERNET_ENABLED',"local USB commands")
     text=replace_one(text,'#endif\n    if (reply[0]) {',
         '#endif\n    }\n    if (reply[0]) {',"local USB command block")
     text=replace_one(text,"  the_mesh.loop();\n  sensors.loop();",
@@ -73,17 +73,18 @@ bool RadioLibWrapper::pmResume() {
     mesh_file=main_file.parent/"MyMesh.cpp"
     mesh_text=mesh_file.read_text()
     mesh_text=replace_one(mesh_text,'#include "MyMesh.h"',
-        '#include "MyMesh.h"\n#include "PowerMonitor.h"\n#include "LoRaOta.h"\n#include "RadioPause.h"\nextern pm::PowerMonitor power_monitor;',
+        '#include "MyMesh.h"\n#include "PowerMonitor.h"\n#include "LoRaOta.h"\n#include "RadioPause.h"\n#include "TelemetryPage.h"\nextern pm::PowerMonitor power_monitor;',
         "telemetry includes")
     mesh_text=replace_one(mesh_text,'    sensors.querySensors(perm_mask, telemetry);',
-        '    power_monitor.appendTelemetry(telemetry,perm_mask);\n    sensors.querySensors(perm_mask, telemetry);',
+        '    if(pm::telemetry_page.includePower())power_monitor.appendTelemetry(telemetry,perm_mask);\n    if(pm::telemetry_page.includeEnvironment())sensors.querySensors(perm_mask, telemetry);',
         "native telemetry response")
     # Upstream gates radio text CLI to authenticated admins. The hook follows
     # its optional companion prefix, preserving the reply prefix. Reset is
     # denied here even if a remote sender supplies a zero timestamp; only the
     # direct local USB hook above can reset energy counters.
     anchor='  // handle ACL related commands\n'
-    hook='''  if(pm::radio_pause.command(command,reply,153,millis()))return;
+    hook='''  if(pm::telemetry_page.command(command,reply,153))return;
+  if(pm::radio_pause.command(command,reply,153,millis()))return;
   if (!strcmp(command,"help") || !strcmp(command,"help pm")) {
     power_monitor.handleCommand(command,reply,153);return;
   }
@@ -101,6 +102,8 @@ bool RadioLibWrapper::pmResume() {
   }
 '''
     mesh_text=replace_one(mesh_text,anchor,hook+anchor,"on-demand admin diagnostics")
+    mesh_text=replace_one(mesh_text,'if(!isnan(temperature)) {',
+        'if(pm::telemetry_page.includeEnvironment() && !isnan(temperature)) {','MCU temperature page')
     mesh_file.write_text(mesh_text)
     # Reserve the request tag, MAC and worst-case AES padding, not just tag.
     mesh_text=replace_one(mesh_file.read_text(),'telemetry(MAX_PACKET_PAYLOAD - 4)',
@@ -129,7 +132,7 @@ bool RadioLibWrapper::pmResume() {
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
     for file in ("LoRaOta.h","LoRaOta.cpp","OtaTransfer.h","OtaBootProfile.h"):
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
-    for file in ('PowerMonitorHelp.h','InaEnable.h','RadioPause.h'):
+    for file in ('PowerMonitorHelp.h','InaEnable.h','RadioPause.h','TelemetryPage.h'):
         shutil.copyfile(root/'firmware'/file,main_file.parent/file)
     if os.environ.get('PM_INA228')=='1':
         shutil.copyfile(root/'firmware/Ina228PowerMonitor.h',main_file.parent/'PowerMonitor.h')
