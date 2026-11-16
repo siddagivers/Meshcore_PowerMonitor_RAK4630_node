@@ -1,6 +1,6 @@
 # Dual INA228 test profile
 
-Build using `PM_INA228=1 PM_BUILD_SUFFIX=ina228-test.2 bash scripts/build_on_pi.sh official-lora-ota`
+Build using `PM_INA228=1 PM_BUILD_SUFFIX=ina228-test.3 bash scripts/build_on_pi.sh official-lora-ota`
 inside the normal Pi build virtualenv. Official MeshCore remains pinned to
 81dbae592ffad40b4212bc0b37e82b38da08f4bc (v1.18.0).
 The legacy INA219 profile remains the default when PM_INA228 is absent.
@@ -88,8 +88,12 @@ seconds. Thus latest readings in sparse mode are explicitly aged observations,
 not necessarily fresh current. Official client channel headings cannot be
 renamed by the repeater firmware. Native Cayenne current resolution is 1 mA,
 and signed analog power resolution is 0.01 W. CLI readings show more precision.
-All ten V/I/P groups plus coverage/age use at most 156 telemetry bytes; the
-180-byte stock buffer bounds any additional stock sensors.
+All ten V/I/P groups plus coverage/age use at most 156 telemetry bytes. From
+test.3 the buffer is capped at 163 bytes to reserve the response tag, MAC and
+worst-case AES padding required by the pinned MeshCore datagram size check.
+Base battery voltage uses another four bytes; auxiliary environmental readings
+may be omitted when the buffer is full. Oversized combined path+telemetry
+responses to flooded requests fall back to separate route and data replies.
 
 Commands:
 
