@@ -102,6 +102,22 @@ bool RadioLibWrapper::pmResume() {
 '''
     mesh_text=replace_one(mesh_text,anchor,hook+anchor,"on-demand admin diagnostics")
     mesh_file.write_text(mesh_text)
+    # Reserve the request tag, MAC and worst-case AES padding, not just tag.
+    mesh_text=replace_one(mesh_file.read_text(),'telemetry(MAX_PACKET_PAYLOAD - 4)',
+        'telemetry(MAX_PACKET_PAYLOAD - CIPHER_MAC_SIZE - (CIPHER_BLOCK_SIZE - 1) - 4)',
+        'encrypted telemetry budget')
+    # A flooded request normally combines path+response. Large valid telemetry
+    # can exceed that separate route container; return path and data separately.
+    mesh_text=replace_one(mesh_text,
+        '        if (path) sendFloodReply(path, SERVER_RESPONSE_DELAY, packet->getPathHashSize());',
+        '''        if (path) sendFloodReply(path, SERVER_RESPONSE_DELAY, packet->getPathHashSize());
+        else if(data[4] == REQ_TYPE_GET_TELEMETRY_DATA) {
+          mesh::Packet* route=createPathReturn(client->id,secret,packet->path,packet->path_len,0,nullptr,0);
+          if(route)sendFloodReply(route,SERVER_RESPONSE_DELAY,packet->getPathHashSize());
+          mesh::Packet* response=createDatagram(PAYLOAD_TYPE_RESPONSE,client->id,secret,reply_data,reply_len);
+          if(response)sendFloodReply(response,SERVER_RESPONSE_DELAY,packet->getPathHashSize());
+        }''','oversize telemetry route fallback')
+    mesh_file.write_text(mesh_text)
     sensors=args.upstream/'src/helpers/sensors/EnvironmentSensorManager.cpp'
     sensor_text=sensors.read_text()
     for sensor in ('AHTX0','SHTC3'):
