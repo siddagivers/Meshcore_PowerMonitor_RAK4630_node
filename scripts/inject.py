@@ -109,8 +109,10 @@ bool RadioLibWrapper::pmResume() {
     # A flooded request normally combines path+response. Large valid telemetry
     # can exceed that separate route container; return path and data separately.
     mesh_text=replace_one(mesh_text,
-        '        if (path) sendFloodReply(path, SERVER_RESPONSE_DELAY, packet->getPathHashSize());',
-        '''        if (path) sendFloodReply(path, SERVER_RESPONSE_DELAY, packet->getPathHashSize());
+        '        mesh::Packet *path = createPathReturn(client->id, secret, packet->path, packet->path_len,\n                                              PAYLOAD_TYPE_RESPONSE, reply_data, reply_len);\n        if (path) sendFloodReply(path, SERVER_RESPONSE_DELAY, packet->getPathHashSize());',
+        '''        mesh::Packet *path = createPathReturn(client->id, secret, packet->path, packet->path_len,
+                                              PAYLOAD_TYPE_RESPONSE, reply_data, reply_len);
+        if (path) sendFloodReply(path, SERVER_RESPONSE_DELAY, packet->getPathHashSize());
         else if(data[4] == REQ_TYPE_GET_TELEMETRY_DATA) {
           mesh::Packet* route=createPathReturn(client->id,secret,packet->path,packet->path_len,0,nullptr,0);
           if(route)sendFloodReply(route,SERVER_RESPONSE_DELAY,packet->getPathHashSize());
