@@ -16,9 +16,18 @@ def patch(text,expected):
     if count!=expected:raise RuntimeError('Unexpected sensor retry layout: '+str(count))
     return '// PM_SENSOR_DEADLINES\n'+text
 
+def patch_calibration(text):
+    if '// PM_CALIBRATION_DEADLINE' in text:return text
+    old='while (isReadingCalibration())\n    delay(10);'
+    if text.count(old)!=1:raise RuntimeError('Unexpected BME calibration wait')
+    new='{ const uint32_t pm_started=millis(); while(isReadingCalibration()) { if((uint32_t)(millis()-pm_started)>=500)return false; delay(10); } }'
+    return '// PM_CALIBRATION_DEADLINE\n'+text.replace(old,new)
+
 if 'Import' in globals():
     Import('env')
     base=Path(env.subst('$PROJECT_LIBDEPS_DIR'))/env.subst('$PIOENV')
     for directory,filename,count in [('Adafruit AHTX0','Adafruit_AHTX0.cpp',3),('Adafruit SHTC3 Library','Adafruit_SHTC3.cpp',1)]:
         path=base/directory/filename
         path.write_text(patch(path.read_text(encoding='utf-8'),count),encoding='utf-8')
+    path=base/'Adafruit BME280 Library'/'Adafruit_BME280.cpp'
+    path.write_text(patch_calibration(path.read_text(encoding='utf-8')),encoding='utf-8')

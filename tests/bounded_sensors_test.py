@@ -12,12 +12,14 @@ uint32_t ticks=0; int mode=0;
 uint32_t millis(){return ticks;}
 void delay(unsigned n){ticks+=n;}
 uint8_t getStatus(){return mode==0?0:mode==1?0xff:0x80;}
+bool isReadingCalibration(){return mode!=0;}
 struct Device {bool read(uint8_t*,unsigned){return mode==0;}} device;
 Device* i2c_dev=&device;
-'''+module.patch(aht,3)+module.patch(sht,1)+r'''
+'''+module.patch(aht,3)+module.patch(sht,1)+module.patch_calibration('bool calibration(){while (isReadingCalibration())\n    delay(10); return true;}')+r'''
 int main(){assert(aht());assert(sht());mode=1;ticks=0;assert(!aht());assert(ticks==0);
 ticks=0;assert(!sht());assert(ticks==500);mode=2;ticks=0;assert(!aht());assert(ticks==500);
-mode=0;assert(aht());assert(sht());}
+ticks=0;assert(!calibration());assert(ticks==500);
+mode=0;assert(aht());assert(sht());assert(calibration());}
 '''
 assert module.patch(module.patch(aht,3),3)==module.patch(aht,3)
 try:module.patch('unexpected dependency',3)
