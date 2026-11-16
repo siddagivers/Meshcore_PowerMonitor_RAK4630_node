@@ -1,6 +1,6 @@
 # Dual INA228 test profile
 
-Build using `PM_INA228=1 PM_BUILD_SUFFIX=ina228-test.3 bash scripts/build_on_pi.sh official-lora-ota`
+Build using `PM_INA228=1 PM_BUILD_SUFFIX=ina228-test.4 bash scripts/build_on_pi.sh official-lora-ota`
 inside the normal Pi build virtualenv. Official MeshCore remains pinned to
 81dbae592ffad40b4212bc0b37e82b38da08f4bc (v1.18.0).
 The legacy INA219 profile remains the default when PM_INA228 is absent.
@@ -73,6 +73,23 @@ not saved yet/FS error. UTC must be set correctly for histories to be useful.
 No unsolicited telemetry advertisements are added. Request telemetry normally
 as an authenticated client with environmental telemetry permission.
 
+From test.4 the response is selectable. In Repeater Admin run a command below,
+then refresh the app's Telemetry screen:
+
+| Command | Next telemetry response |
+|---|---|
+| `pm telemetry live` | Latest INA solar/battery readings and supported stock environment sensors; default after reboot |
+| `pm telemetry power` | Latest INA readings and all INA history windows/coverage/ages |
+| `pm telemetry environment` | Supported stock environment sensors and MCU temperature, without INA history |
+| `pm telemetry status` | Show the active page without changing it |
+
+Base board battery voltage remains in all pages. Selection is global to the
+repeater, applies to subsequent clients' requests, and lasts until changed or
+rebooted. The mode is not saved to flash. Sensor sampling/history recording
+continues regardless of the page. The stock app receives one page per request;
+this does not implement automatic multi-packet reassembly or promise a merged
+view. `pm help 13` describes the commands. Existing MCP9808 exclusion remains.
+
 | Channel | Meaning |
 |---|---|
 | 100 | Latest solar observation |
@@ -88,11 +105,12 @@ seconds. Thus latest readings in sparse mode are explicitly aged observations,
 not necessarily fresh current. Official client channel headings cannot be
 renamed by the repeater firmware. Native Cayenne current resolution is 1 mA,
 and signed analog power resolution is 0.01 W. CLI readings show more precision.
-All ten V/I/P groups plus coverage/age use at most 156 telemetry bytes. From
+On the power page all ten V/I/P groups plus coverage/age use at most 156 telemetry bytes. From
 test.3 the buffer is capped at 163 bytes to reserve the response tag, MAC and
 worst-case AES padding required by the pinned MeshCore datagram size check.
-Base battery voltage uses another four bytes; auxiliary environmental readings
-may be omitted when the buffer is full. Oversized combined path+telemetry
+Base battery voltage uses another four bytes. Test.4 moves environmental
+readings to live/environment pages rather than dropping them to fit power
+history. Each page still respects the same encoder capacity. Oversized combined path+telemetry
 responses to flooded requests fall back to separate route and data replies.
 
 Commands:

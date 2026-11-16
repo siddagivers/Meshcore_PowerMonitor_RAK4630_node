@@ -1,6 +1,6 @@
 # PowerMonitor commands: INA228 test.2 / INA219 test.1
 
-`pm help` displays the index; `pm help 1` through `pm help 12` display all
+`pm help` displays the index; `pm help 1` through `pm help 13` display all
 described pages. Each page fits a MeshCore admin reply without truncation.
 The same commands work locally over USB and in authenticated Repeater Admin,
 except operations specifically marked USB only.
@@ -36,6 +36,10 @@ sensors remain independent. INA219 `pm i2c` skips 0x40/0x41 while disabled.
 | `pm load` | Latest battery V/A/W |
 | `pm channels` | Telemetry channel/unit legend |
 | `pm ina on` / `pm ina off` | Persistent INA enable/disable |
+| `pm telemetry live` | INA228 test.4+: latest INA plus stock environment in next app refresh; reboot default |
+| `pm telemetry power` | INA228 test.4+: complete INA readings/history page |
+| `pm telemetry environment` | INA228 test.4+: supported stock environmental sensors page |
+| `pm telemetry status` | Active global page selection |
 | `pm ota status` | Pairing, flash and staged image progress |
 | `pm ota boot` | Exact bootloader compatibility |
 | `pm ota result` | Last verification/activation result |
