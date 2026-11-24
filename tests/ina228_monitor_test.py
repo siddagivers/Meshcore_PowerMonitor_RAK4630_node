@@ -37,13 +37,13 @@ inline const char* pmWireLastTimeoutStage(){return "none";}
 'CayenneLPP.h':r'''#pragma once
 #include <vector>
 struct CayenneLPP {
- std::vector<unsigned> temperatures,volts;
+ std::vector<unsigned> temperatures,volts,ages,coverage;
  void addTemperature(unsigned id,float){temperatures.push_back(id);}
  void addVoltage(unsigned id,float){volts.push_back(id);}
  void addCurrent(unsigned,float){}
  void addAnalogInput(unsigned,float){}
- void addGenericSensor(unsigned,float){}
- void addPercentage(unsigned,float){}
+ void addGenericSensor(unsigned id,float){ages.push_back(id);}
+ void addPercentage(unsigned id,float){coverage.push_back(id);}
 };
 ''',
 'InternalFileSystem.h':r'''#pragma once
@@ -90,7 +90,7 @@ int main(){
  const char* bothDisabled="solar40:DISABLED battery41:DISABLED; mcp18:OK";
  const char* solarVoltage="5.0000V";
  const char* batteryVoltage="4.0000V";
- assert(pm::telemetry_page.page==pm::TelemetryPage::POWER);
+ assert(pm::telemetry_page.page==pm::TelemetryPage::COMBINED);
 #else
  const char* bothOk="solar41:OK battery40:OK; mcp18:OK";
  const char* batteryMissing="battery40:MISSING";
@@ -107,6 +107,18 @@ int main(){
  monitor.handleCommand("pm sensors",reply,sizeof(reply));assert(strstr(reply,bothOk));
  monitor.handleCommand("pm solar",reply,sizeof(reply));assert(strstr(reply,solarVoltage)&&strstr(reply," 0.001000A"));
  monitor.handleCommand("pm load",reply,sizeof(reply));assert(strstr(reply,batteryVoltage)&&strstr(reply," -0.001000A"));
+#if PM_SIDOROVO
+ CayenneLPP combined;
+ monitor.appendTelemetry(combined,2);
+ assert((combined.volts==std::vector<unsigned>{100,110,111,112,101,120,121,122}));
+ assert(combined.temperatures==std::vector<unsigned>{102});
+ assert(combined.ages.empty()&&combined.coverage.empty());
+ CayenneLPP power;
+ monitor.appendTelemetry(power,2,pm::TelemetryPage::POWER);
+ assert(power.volts==combined.volts&&power.ages.size()==2&&power.coverage.size()==8);
+ assert(pm::telemetry_page.command("pm telemetry combined",reply,sizeof(reply)));
+ assert(strstr(reply,"Telemetry page: combined"));
+#endif
  pm::telemetry_page.page=pm::TelemetryPage::ENVIRONMENT;
  CayenneLPP env;monitor.appendTelemetry(env,2);assert(env.temperatures.size()==1&&env.temperatures[0]==102&&env.volts.empty());
  CayenneLPP denied;monitor.appendTelemetry(denied,0);assert(denied.temperatures.empty());

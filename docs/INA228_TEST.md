@@ -9,7 +9,8 @@ The legacy INA219 profile remains the default without PM_INA228.
 
 Battery INA228: 0x40. Solar INA228: 0x41. Both R100 = 0.100 ohm.
 The RAK4631 Sidorovo profile (`PM_SIDOROVO=1` together with `PM_INA228=1`)
-uses solar 0x40 and battery 0x41 and boots into the power telemetry page.
+uses solar 0x40 and battery 0x41. From test.9 it boots into the combined
+telemetry page, with environmental readings and INA228 history in one reply.
 It stores new history in separate `/pm228-sw.*` snapshots.
 MCP9808: 0x18. Use common ground, SDA/SCL and 3.3-V-compatible pull-ups.
 INA228 IDs are checked before configuration; other INA models cannot substitute.
@@ -65,6 +66,7 @@ Run a command in Repeater Admin, then refresh Telemetry:
 | `pm telemetry live` | Fresh current solar/battery, MCP and environmental readings; default after reboot |
 | `pm telemetry power` | Fresh solar/battery V/A/W plus 5m, 15m, 1h and completed previous UTC-day means |
 | `pm telemetry environment` | Fresh MCP and supported environmental readings, without INA history |
+| `pm telemetry combined` | Sidorovo profile only. Fresh environment and INA values plus all history windows. |
 | `pm telemetry status` | Show selection |
 
 Base battery voltage appears on every page. Selection is global until changed;

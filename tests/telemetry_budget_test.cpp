@@ -10,5 +10,8 @@ int main(){
  assert(2+mac+((budget+tag+block-1)/block)*block<=payload);
  // All INA228 V/I/P windows, coverage, ages and base voltage fit.
  assert(10*12+8*3+2*6+4<=budget);
+ // Combined page still fits at full INA history, with room for board V/T,
+ // MCP9808 and the environmental record (temperature, humidity, pressure).
+ assert(10*12+4+4+4+4+3+4<=budget);
  puts("PASS encrypted telemetry limits, worst-case AES padding, maximum-size boundary, and all INA228 groups");
 }

@@ -142,17 +142,24 @@ void PowerMonitor::appendTelemetry(CayenneLPP& lpp,uint8_t permissions,Telemetry
   if(!(permissions&TELEM_PERM_ENVIRONMENT))return;
   if(page!=TelemetryPage::POWER&&mcp_.valid)lpp.addTemperature(102,mcp_.temperature);
   if(page==TelemetryPage::ENVIRONMENT)return;
-  // 120 bytes for all available V/A/signed-W groups + 24 bytes coverage.
-  // Stock sensor additions remain subject to Cayenne buffer checks.
+  // Reserve room for channel 1 and the environmental channels on a
+  // combined reply. The dedicated power page still includes diagnostics.
+  const bool diagnostics=page!=TelemetryPage::COMBINED;
   const unsigned windows[]={300,900,3600,0};
   for(unsigned i=0;i<2;i++){
-    const auto& c=channel_[i];if(c.valid){emit(lpp,100+i,c.v,c.a,c.w);lpp.addGenericSensor(100+i,(millis()-c.last)/1000);}
+    const auto& c=channel_[i];
+    if(c.valid){
+      emit(lpp,100+i,c.v,c.a,c.w);
+      if(diagnostics)lpp.addGenericSensor(100+i,(millis()-c.last)/1000);
+    }
     if(page==TelemetryPage::LIVE)continue;
     for(unsigned j=0;j<4;j++){
       auto mean=j==3?history_[i].yesterday(utc_):history_[i].get(utc_,windows[j]);uint8_t id=110+i*10+j;
       if(mean.ms)emit(lpp,id,mean.v(),mean.a(),mean.w());
-      uint32_t span=windows[j]?windows[j]*1000UL:86400000UL;
-      lpp.addPercentage(id,span?fminf(100,mean.ms*100.0f/span):0);
+      if(diagnostics){
+        uint32_t span=windows[j]?windows[j]*1000UL:86400000UL;
+        lpp.addPercentage(id,fminf(100,mean.ms*100.0f/span));
+      }
     }
   }
 }

@@ -86,6 +86,8 @@ int main(){
  assert(pm::collectFresh(output,sizeof(output),size));assert(size==3&&sensors.queries==1);
  assert(pm::startFresh(sensors,0,pm::TelemetryPage::POWER,1,4,25));processRequest();
  assert(pm::collectFresh(output,sizeof(output),size));assert(size==1&&power_monitor.refreshes==2);
+ assert(pm::startFresh(sensors,4,pm::TelemetryPage::COMBINED,1,4,25));processRequest();
+ assert(pm::collectFresh(output,sizeof(output),size));assert(size==4&&sensors.queries==2&&power_monitor.refreshes==3);
  for(unsigned i=0;i<256;++i){
   assert(pm::startFresh(sensors,4,pm::TelemetryPage::LIVE,1,4,25));processRequest();
   assert(pm::collectFresh(output,sizeof(output),size)&&size==4);

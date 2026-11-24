@@ -26,8 +26,8 @@ void sampleTelemetry(){
     power_monitor.appendTelemetry(result,job.permissions,job.page);
   }
   if(job.page!=TelemetryPage::POWER){
-    job.sensors->querySensors(job.permissions,result);
     if(isfinite(job.mcu))result.addTemperature(1,job.mcu);
+    job.sensors->querySensors(job.permissions,result);
   }
   job.size=result.getSize();memcpy(job.data,result.getBuffer(),job.size);
 }
