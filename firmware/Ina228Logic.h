@@ -32,11 +32,23 @@ struct Ina228History {
   struct Bucket {uint32_t minute=0;Ina228Mean mean;};
   Bucket buckets[121];
   uint32_t day=0,lastUtc=0;DayMean today;
+  uint32_t previousDay=0;DayMean previous;
+  void advance(uint32_t utc){
+    if(utc<1700000000)return;
+    const uint32_t next=utc/86400;
+    if(day==next)return;
+    previousDay=day&&day+1==next?day:0;
+    previous=previousDay?today:DayMean{};
+    today=DayMean{};day=next;
+  }
+  Ina228Mean yesterday(uint32_t utc)const{
+    return previousDay&&previousDay+1==utc/86400?previous.result():Ina228Mean{};
+  }
   void add(uint32_t utc,float v,float a,float w,uint32_t dt){
     if(utc<1700000000 || !dt)return;
-    if(lastUtc && utc<lastUtc){for(auto& b:buckets)b=Bucket{};today=DayMean{};day=0;}
+    if(lastUtc && utc<lastUtc){for(auto& b:buckets)b=Bucket{};today=DayMean{};previous=DayMean{};previousDay=0;day=0;}
     lastUtc=utc;
-    if(day!=utc/86400){day=utc/86400;today=DayMean{};}
+    advance(utc);
     const uint32_t minute=utc/30;auto& b=buckets[minute%121];
     if(b.minute!=minute){b.minute=minute;b.mean=Ina228Mean{};}
     b.mean.add(v,a,w,dt);today.add(v,a,w,dt);

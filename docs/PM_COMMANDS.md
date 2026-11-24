@@ -96,3 +96,14 @@ the pause no LoRa command can arrive: early resume requires local USB.
 USB CLI and sensor sampling continue. A reboot restores radio operation;
 the pause is not persisted. Radio sleep/resume errors are reported by status.
 No frequency, modulation, identity, password or bootloader setting is changed.
+
+## INA228 test.5 additions
+
+`pm temp` reports MCP9808 at 0x18, independent of INA on/off. Channel 102 is
+temperature on live/environment pages. Telemetry requests take fresh readings
+in a separate task; `pm diag` reports its state. Other power-monitor commands
+may report busy while sampling, rather than accessing the shared I2C bus.
+
+On the power page, 113/123 now mean the completed previous UTC day. Read it
+with `pm history solar prevday` or `pm history battery prevday`. `day` continues
+to mean the current partial UTC day in CLI commands. One completed day is kept.

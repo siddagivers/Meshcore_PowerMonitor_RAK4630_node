@@ -7,7 +7,7 @@ inline bool powerHelp(const char* c,char* out,size_t cap,bool ina228){
   const char* common[]={
     "pm version: firmware revision; pm diag: I2C timeout/uptime diagnostics; pm sensors: detection, errors and operating mode.",
     "pm ina off: shut down both INA sensors and stop polling; pm ina on: enable/re-detect them. Choice survives reboot. Does not cut supply power.",
-    "pm solar: latest solar V/A/W; pm load: latest battery V/A/W; pm channels: telemetry channel legend. Missing readings are not zero consumption.",
+    "pm solar: solar V/A/W; pm load: battery V/A/W; pm temp: MCP9808 at 0x18; pm channels: telemetry legend. Missing readings are not zero consumption.",
     "pm ota status: stage/provisioning; pm ota boot: bootloader compatibility; pm ota result: last verification/activation result.",
     "pm ota verify <id>: verify staged image; pm ota apply <id>: verify and activate/reset; pm ota cancel: DISCARD staged image. Use uploader's ID.",
     "pm ota pair RAK4631_RAK15001_C: pair hardware; pm ota trust <signer-key>: trust firmware signer. Both local USB only; pm ota test: build marker.",
@@ -16,7 +16,7 @@ inline bool powerHelp(const char* c,char* out,size_t cap,bool ina228){
   };
   const char* extended228[]={
     "pm battery continuous off: five-minute single shots; pm battery continuous on: continuous measurement. Saved choice; pm ina off overrides both.",
-    "pm history solar 5m/15m/1h/day: observed mean V/A/W; replace solar with battery for battery history. day=current UTC day, not rolling 24h.",
+    "pm history solar 5m/15m/1h/day/prevday: mean V/A/W; use battery for battery. day=today UTC; prevday=completed UTC day. Gaps not extrapolated.",
     "Solar auto: check every 10min while idle; |I|>=2mA starts continuous; |I|<=0.5mA for 30s returns idle. History checkpoints every 15min.",
     "Telemetry: Current=signed A; Analog Input=signed W; Percentage=measured coverage; Generic Sensor on 100/101=age seconds. Gaps not extrapolated."
   };

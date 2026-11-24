@@ -18,6 +18,8 @@ if [[ ! -d "$UP/.git" ]];then git clone "$URL" "$UP";fi
 git -C "$UP" fetch origin "$REV"
 git -C "$UP" checkout --detach "$REV"
 git -C "$UP" restore examples/simple_repeater/main.cpp examples/simple_repeater/MyMesh.cpp variants/rak4631/platformio.ini src/Dispatcher.h
+git -C "$UP" restore examples/simple_repeater/MyMesh.h
+git -C "$UP" restore src/helpers/AutoDiscoverRTCClock.h src/helpers/AutoDiscoverRTCClock.cpp
 git -C "$UP" restore src/helpers/sensors/EnvironmentSensorManager.cpp
 git -C "$UP" restore src/helpers/radiolib/RadioLibWrappers.h src/helpers/radiolib/RadioLibWrappers.cpp
 OTA_ARGS=()

@@ -20,6 +20,10 @@ int main(){
  assert(history.get(utc+4000,300).ms==0);
  auto day=history.get(utc+60,0);assert(day.ms==60000);
  history.add(utc+86400,5,.2,1,20);assert(history.get(utc+86400,0).ms==20);
+ assert(history.yesterday(utc+86400).ms==60000);
+ assert(fabs(history.yesterday(utc+86400).w()-.4)<.001);
+ history.advance(utc+2*86400);assert(history.yesterday(utc+2*86400).ms==20);
+ history.advance(utc+4*86400);assert(history.yesterday(utc+4*86400).ms==0);
  history.add(utc,4,.1,.4,20);assert(history.get(utc,0).ms==20);
  Ina228History longday;uint32_t start=(1700000000/86400+1)*86400;
  for(unsigned i=0;i<4000000;i++)longday.add(start+i/50,4,.031f,.124f,20);

@@ -76,7 +76,7 @@ bool RadioLibWrapper::pmResume() {
         '#include "MyMesh.h"\n#include "PowerMonitor.h"\n#include "LoRaOta.h"\n#include "RadioPause.h"\n#include "TelemetryPage.h"\nextern pm::PowerMonitor power_monitor;',
         "telemetry includes")
     mesh_text=replace_one(mesh_text,'    sensors.querySensors(perm_mask, telemetry);',
-        '    if(pm::telemetry_page.includePower())power_monitor.appendTelemetry(telemetry,perm_mask);\n    if(pm::telemetry_page.includeEnvironment())sensors.querySensors(perm_mask, telemetry);',
+        ('    power_monitor.appendTelemetry(telemetry,perm_mask);' if os.environ.get('PM_INA228')=='1' else '    if(pm::telemetry_page.includePower())power_monitor.appendTelemetry(telemetry,perm_mask);')+'\n    if(pm::telemetry_page.includeEnvironment())sensors.querySensors(perm_mask, telemetry);',
         "native telemetry response")
     # Upstream gates radio text CLI to authenticated admins. The hook follows
     # its optional companion prefix, preserving the reply prefix. Reset is
@@ -127,6 +127,14 @@ bool RadioLibWrapper::pmResume() {
     sensor_text=sensors.read_text()
     for sensor in ('AHTX0','SHTC3'):
         sensor_text=replace_one(sensor_text,sensor+'.getEvent(&humidity, &temp);','if(!'+sensor+'.getEvent(&humidity, &temp))return;','sensor failure propagation '+sensor)
+    sensor_text=replace_one(sensor_text,
+        '  lpp.addTemperature(ch, LPS22HB.readTemperature());\n  lpp.addBarometricPressure(ch, LPS22HB.readPressure() * 10);',
+        '  const float pressure=LPS22HB.readPressure();\n  if(!isfinite(pressure))return;\n  lpp.addTemperature(ch, LPS22HB.readTemperature());\n  lpp.addBarometricPressure(ch, pressure * 10);',
+        'barometer error propagation')
+    if os.environ.get('PM_INA228')=='1':
+        # PlatformIO retains inherited -U flags after -D overrides on this
+        # board. Select the raw driver in the actual sensor translation unit.
+        sensor_text='#undef ENV_INCLUDE_BME680_BSEC\n#undef ENV_INCLUDE_BME680\n#define ENV_INCLUDE_BME680 1\n'+sensor_text
     sensors.write_text(sensor_text)
     for file in ("PowerMonitor.h","PowerMonitor.cpp","EnergyIntegrator.h","SolarHistory.h","PowerTelemetry.h","SensorDecoders.h","BoundedWireWait.h"):
         shutil.copyfile(root/"firmware"/file,main_file.parent/file)
@@ -138,6 +146,7 @@ bool RadioLibWrapper::pmResume() {
         shutil.copyfile(root/'firmware/Ina228PowerMonitor.h',main_file.parent/'PowerMonitor.h')
         shutil.copyfile(root/'firmware/Ina228PowerMonitor.cpp',main_file.parent/'PowerMonitor.cpp')
         shutil.copyfile(root/'firmware/Ina228Logic.h',main_file.parent/'Ina228Logic.h')
+        shutil.copyfile(root/'firmware/Mcp9808Monitor.h',main_file.parent/'Mcp9808Monitor.h')
     ota_dest=args.upstream/"src/helpers/pm_ota"
     if ota_dest.exists():shutil.rmtree(ota_dest)
     if args.lora_ota:
@@ -173,6 +182,7 @@ bool RadioLibWrapper::pmResume() {
         "  -D ENV_INCLUDE_INA219=1\n"
         "build_flags = ${env:"+base+".build_flags}\n"
         "  -Os\n"
+        "  -fstack-usage\n"
         "  -DPM_SAMPLE_MS=20\n"
         "  -DPM_CHECKPOINT_MS=900000\n"
         "  -DPM_TEMPERATURE_MS=60000\n"
@@ -202,6 +212,15 @@ build_src_filter = ${env:RAK_4631_repeater.build_src_filter}
     if os.environ.get('PM_INA228')=='1':
         ini.write_text(ini.read_text().replace('  -DENV_INCLUDE_INA219=0\n',
             '  -DENV_INCLUDE_INA219=0\n  -DENV_INCLUDE_INA226=0\n  -DENV_INCLUDE_INA3221=0\n'))
+        # Raw forced readings, not the BSEC algorithm's previous cached sample.
+        config=ini.read_text().replace('  -D ENV_INCLUDE_INA219=1\n',
+            '  -D ENV_INCLUDE_INA219=1\n  -D ENV_INCLUDE_BME680_BSEC=1\n  -UENV_INCLUDE_BME680\n')
+        ini.write_text(config.replace('  -DENV_INCLUDE_INA219=0\n','  -DENV_INCLUDE_INA219=0\n  -DENV_INCLUDE_BME680=1\n'))
+        from pm_async_telemetry import patch as patch_async
+        patch_async(args.upstream,root,replace_one)
+    else:
+        for name in ('SensorRefresh.h','SensorRefresh.cpp'):
+            (main_file.parent/name).unlink(missing_ok=True)
     print("Patched official MeshCore",args.version,"LoRa OTA:",args.lora_ota,args.upstream)
 
 if __name__=="__main__":

@@ -1,147 +1,132 @@
-# Dual INA228 test profile
+# Dual INA228 + MCP9808 test firmware
 
-Build using `PM_INA228=1 PM_BUILD_SUFFIX=ina228-test.4 bash scripts/build_on_pi.sh official-lora-ota`
-inside the normal Pi build virtualenv. Official MeshCore remains pinned to
+Build: `PM_INA228=1 PM_BUILD_SUFFIX=ina228-test.6 bash scripts/build_on_pi.sh official-lora-ota`
+in the normal Pi build virtualenv. MeshCore is pinned to
 81dbae592ffad40b4212bc0b37e82b38da08f4bc (v1.18.0).
-The legacy INA219 profile remains the default when PM_INA228 is absent.
+The legacy INA219 profile remains the default without PM_INA228.
 
 ## Hardware
 
-In test.2 and later: two genuine INA228 devices, battery 0x40 and solar 0x41, R100 = 0.100 ohm
-shunts on both. Share ground/SDA/SCL and use 3.3-V-compatible I2C pull-ups.
-Test.1 used the opposite mapping; install the correct version for your wiring.
-Battery 0x40: A1=GND, A0=GND. Solar 0x41: A1=GND, A0=VS (logic supply).
-Do not tie A0 to VS while a ground strap is still fitted; inspect the board's
-jumper topology before changing solder bridges. Do not leave address pins floating.
-Raw manufacturer/device IDs are checked before configuration; INA219, INA226
-and INA238 are not interchangeable. Conflicting stock power-sensor probes
-are disabled. MCP9808 is not part of this test profile. Stock environmental
-sensors still use the earlier bounded AHT/SHT driver fixes.
+Battery INA228: 0x40. Solar INA228: 0x41. Both R100 = 0.100 ohm.
+MCP9808: 0x18. Use common ground, SDA/SCL and 3.3-V-compatible pull-ups.
+INA228 IDs are checked before configuration; other INA models cannot substitute.
+MCP manufacturer/device IDs are checked too. `pm sensors` lists the addresses
+and detection state; `pm temp` gives MCP temperature, IDs, raw data and age.
+Stock RAK environmental drivers remain enabled, including AHT, SHTC3/SHT4X,
+BME280/BMP280, LPS22HB, BME680 and BMP085. Only detected sensors initialize.
+BME680 uses raw forced readings in test.5, not cached BSEC IAQ outputs. Add
+stock environmental modules before reboot so the startup scan can find them.
 
-The normal +/-163.84-mV shunt range supports roughly +/-1.638 A with R100.
-Saturated readings are rejected. Bus voltage uses 195.3125 uV/count and signed
-shunt voltage uses 312.5 nV/count. Current = shunt voltage / measured shunt
-resistance; signed power = bus voltage * signed current. The hardware energy
-and charge accumulators are not used. Component tolerance and offsets still
-require physical calibration/verification. Battery orientation is the previous
-discharge-positive raw convention, inverted for positive charging and negative
-discharging. Swap the two sense leads if physical direction is opposite.
+RAK15001 in slot C remains the MeshCore OTA staging store: JEDEC C84015, 2 MiB,
+CS P0.26. Signed image verification, local pairing/trust and bootloader gates
+remain enabled. This application does not replace the bootloader. Verify the
+actual device with `pm ota boot` and `pm ota status`; a build alone cannot
+establish that the installed bootloader or signer is correctly provisioned.
 
-Source: https://www.ti.com/lit/ds/symlink/ina228.pdf
+## Fresh telemetry and radio isolation
 
-## Sampling modes
+The first accepted telemetry request creates a 16-KiB sensor task that waits
+between requests and is reused. Each request releases its encoder buffer before
+the task hands the result to the radio loop. The task obtains
+new INA readings, including a one-shot when the normal mode is sparse, refreshes
+the MCP reading and queries the selected environmental drivers. It does not
+reuse a previously prepared telemetry response. Sensor conversion latency still
+applies: continuously converting temperature devices expose their newest
+completed physical conversion. MCP wake waits 300ms; until ready it is omitted.
+Failed INA/MCP reads invalidate their current reading rather than reporting zero
+or reusing an older reading as fresh. `pm ina off` prevents INA measurements,
+including telemetry-triggered ones; MCP and other environmental sensors continue.
 
-Battery defaults to continuous ADC conversion, host observations every 20 ms.
-From test.2, `pm ina off` requests shutdown and disables automatic INA access;
-`pm ina on` restores it. This separate saved enable setting overrides both
-sampling modes; see PM_COMMANDS.md for described help and timed radio pause.
-`pm battery continuous off` selects one triggered conversion every 5 minutes;
-the INA228 returns to ADC shutdown between conversions. `pm battery continuous on`
-restores continuous conversion. The choice is stored separately in InternalFS.
-The battery power circuit is never switched off by this setting.
+The main task owns MeshCore, packets, routing, ACL, crypto and filesystem work.
+While the sensor task owns I2C, normal sensor polling and display updates pause.
+An external RTC uses an advancing software mirror; hardware clock writes defer.
+The radio loop and USB continue. Sensor diagnostics report a task exceeding five
+seconds as `sensor stalled; bus isolated`. A truly stuck task is not forcibly
+deleted or allowed to collide with another I2C task: future sensor requests
+wait, but ordinary MeshCore commands (including reboot) remain available.
+`pm diag` and `pm version` remain available while sensor commands report busy.
+This protects against sensor-task stalls, not every possible hardware/RTOS fault.
 
-Solar starts with a single-shot check. At >=2 mA current magnitude it switches to
-continuous conversion (including reverse leakage). At <=0.5 mA magnitude for 30 seconds it switches to a ten-minute
-single-shot cadence. This hysteresis avoids chatter around noisy zero readings.
-Generation beginning between checks can be missed for up to ten minutes.
-Both devices remain supplied; shutdown stops their ADC conversion. The host
-and MeshCore receiver remain running, so total board sleep current is not
-claimed. A conversion deadline prevents an absent/not-ready device from
-blocking the repeater; reconnection is retried every ten seconds.
+Project-local Wire bounds all eight master event waits (50ms plus a frozen-clock
+spin limit). AHT and SHT retry loops are bounded, BME280 calibration waits are
+bounded, and test.5 fixes the LPS22HB infinite ONE_SHOT wait/NACK loop. INA-ready
+polls run no faster than every 20ms; continuous and triggered conversions have
+a 200ms no-ready deadline and failed sensors are re-probed after ten seconds.
 
-## Histories and accuracy
+## Pages in the official MeshCore app
 
-Both sensors store weighted mean voltage, signed current and signed power for
-5 minutes, 15 minutes, 1 hour, and the current UTC day since 00:00. `day` is
-not a rolling 24-hour window. Histories use thirty-second buckets; the oldest
-partially overlapping bucket is excluded. Time-weighted continuous observations
-have full coverage except gaps/boundaries. Single shots contribute short
-observation weights only: the firmware never assumes their current persisted
-over the entire five/ten-minute sleep interval. Consequently sparse-mode means
-describe sampled time, not an accurate whole-window energy integral.
-No means are reported when a window contains no observations.
+Run a command in Repeater Admin, then refresh Telemetry:
 
-History is held in RAM immediately and checkpointed every 15 minutes to two
-alternating, checksummed `/pm228.a` and `/pm228.b` files with readback checks.
-Power failure can lose observations since the last checkpoint. Existing INA219
-histories are left intact and are not converted. `pm sensors` reports whether
-a history checkpoint has restored/saved successfully; until then it reports
-not saved yet/FS error. UTC must be set correctly for histories to be useful.
-
-## On-demand MeshCore telemetry
-
-No unsolicited telemetry advertisements are added. Request telemetry normally
-as an authenticated client with environmental telemetry permission.
-
-From test.4 the response is selectable. In Repeater Admin run a command below,
-then refresh the app's Telemetry screen:
-
-| Command | Next telemetry response |
+| Command | Response |
 |---|---|
-| `pm telemetry live` | Latest INA solar/battery readings and supported stock environment sensors; default after reboot |
-| `pm telemetry power` | Latest INA readings and all INA history windows/coverage/ages |
-| `pm telemetry environment` | Supported stock environment sensors and MCU temperature, without INA history |
-| `pm telemetry status` | Show the active page without changing it |
+| `pm telemetry live` | Fresh current solar/battery, MCP and environmental readings; default after reboot |
+| `pm telemetry power` | Fresh solar/battery V/A/W plus 5m, 15m, 1h and completed previous UTC-day means |
+| `pm telemetry environment` | Fresh MCP and supported environmental readings, without INA history |
+| `pm telemetry status` | Show selection |
 
-Base board battery voltage remains in all pages. Selection is global to the
-repeater, applies to subsequent clients' requests, and lasts until changed or
-rebooted. The mode is not saved to flash. Sensor sampling/history recording
-continues regardless of the page. The stock app receives one page per request;
-this does not implement automatic multi-packet reassembly or promise a merged
-view. `pm help 13` describes the commands. Existing MCP9808 exclusion remains.
+Base battery voltage appears on every page. Selection is global until changed;
+it resets to live on reboot. Each response is one page, capped at 163 Cayenne
+bytes to leave room for encryption and the request tag. The official app does
+not combine arbitrary additional packets into a single telemetry view. With
+many extra sensors, add a separate page before exceeding this budget; the
+encoder cannot promise unlimited fields. Flooded requests retain the separate
+route/data fallback when a combined response is too large. A page change while
+a refresh runs applies to the next request; the in-flight request keeps its page.
 
-| Channel | Meaning |
+| Channel | Value |
 |---|---|
-| 100 | Latest solar observation |
-| 101 | Latest battery observation |
-| 110 / 120 | Solar / battery 5-minute observed means |
-| 111 / 121 | Solar / battery 15-minute observed means |
-| 112 / 122 | Solar / battery 1-hour observed means |
-| 113 / 123 | Solar / battery current UTC-day observed means |
+| 100 / 101 | Fresh solar / battery |
+| 102 | MCP9808 temperature (live/environment) |
+| 110 / 120 | Solar / battery last 5 minutes |
+| 111 / 121 | Solar / battery last 15 minutes |
+| 112 / 122 | Solar / battery last hour |
+| 113 / 123 | Solar / battery completed previous UTC day |
 
-Voltage = V; Current = signed A; Analog Input = signed W. Percentage on history
-channels is measured coverage. Generic Sensor on 100/101 is sample age in
-seconds. Thus latest readings in sparse mode are explicitly aged observations,
-not necessarily fresh current. Official client channel headings cannot be
-renamed by the repeater firmware. Native Cayenne current resolution is 1 mA,
-and signed analog power resolution is 0.01 W. CLI readings show more precision.
-On the power page all ten V/I/P groups plus coverage/age use at most 156 telemetry bytes. From
-test.3 the buffer is capped at 163 bytes to reserve the response tag, MAC and
-worst-case AES padding required by the pinned MeshCore datagram size check.
-Base battery voltage uses another four bytes. Test.4 moves environmental
-readings to live/environment pages rather than dropping them to fit power
-history. Each page still respects the same encoder capacity. Oversized combined path+telemetry
-responses to flooded requests fall back to separate route and data replies.
+Voltage is V, Current is signed A, Analog Input is signed W. Battery current is
+positive while charging and negative while discharging, subject to wiring
+orientation. Percentage is observed coverage; Generic Sensor on 100/101 is age
+in seconds. No fake digital-input validity fields are added. App resolution is
+1mA for Current and 0.01W for signed Analog Input; CLI has more decimal places.
 
-Commands:
+## Histories and power-saving modes
 
-```text
-pm version
-pm diag
-pm sensors
-pm channels
-pm solar
-pm load
-pm battery continuous off
-pm battery continuous on
-pm history solar 5m
-pm history solar 15m
-pm history solar 1h
-pm history solar day
-pm history battery 5m
-pm history battery 15m
-pm history battery 1h
-pm history battery day
-```
+Battery defaults to continuous; `pm battery continuous off` selects five-minute
+one-shots and `... on` restores continuous. Solar checks every ten minutes while
+idle, switches continuous at |I| >=2mA, and returns idle after |I| <=0.5mA for
+30 seconds. A telemetry request takes an additional fresh observation without
+permanently changing the selected mode. `pm ina off/on` is a separate saved
+master switch. Supply power is not physically disconnected.
 
-Install the application UF2 locally for this sensor migration. Keep the existing
-bootloader; no bootloader is included or automatically changed. OTA activation
-remains blocked if the installed bootloader/profile does not match. Existing
-identity, radio settings and passwords are not intentionally modified, and no
-device is flashed by the build. Keep the recovered identity backup.
+5m/15m/1h means are weighted observations in 30-second buckets. The oldest
+partially overlapping bucket is excluded. Single-shot gaps are not extrapolated;
+coverage tells how much time was measured. Sparse observations are not an
+accurate integral of unmeasured load or solar generation. R100 supports about
+plus/minus 1.638A at the selected shunt range; saturation is rejected.
 
-Native tests cover signed 20-bit decoding, units, battery polarity, saturation,
-solar hysteresis, weighted histories, gaps and UTC rollover/rollback. The build
-also checks HEX/BIN/UF2 layout and DFU CRC/S140 compatibility. Actual INA228
-measurements, sleep current, polarity and long-duration behavior require device
-testing; software tests do not establish those hardware results.
+UTC days run 00:00:00 through 23:59:59. Test.5 retains the completed previous
+day after midnight, even when no new sensor sample arrives at rollover. It
+retains one completed day, not a multi-day archive. Missing days have no invented
+values. `pm history solar day` gives today's partial day; `... prevday` gives
+the completed previous day. Replace solar with battery for battery history.
+Correct device UTC time is required.
+
+Histories checkpoint every 15 minutes and at a main-loop day rollover into two
+alternating CRC-checked/read-back files. Power loss can lose recent RAM samples;
+filesystem errors are reported. Old INA228 test.4 snapshots are migrated into
+the new layout without overwriting identity, radio preferences, credentials,
+OTA pairing/trust or old INA219 files. Old snapshots contain no earlier day
+that can be reconstructed retroactively.
+
+## Validation and installation
+
+Native tests exercise absent/reconnected sensors, stalled INA-ready flags,
+MCP wake/cadence/temperature decoding, asynchronous worker ownership and a
+non-progressing worker, history rollover/rollback, old snapshot migration,
+previous-day persistence, page limits and OTA transport/crypto. The real ARM
+build validates application-only DFU CRC and S140 6.1.1 compatibility. UF2/HEX/BIN
+addresses and hashes are checked independently.
+
+Physical multi-day soak testing, actual fault injection, polarity and power
+consumption still require hardware testing. No hardware is flashed by the build.
+Use the application UF2 on the bootloader drive, or the application DFU ZIP.
+Keep the existing bootloader unless its actual compatibility check fails.
