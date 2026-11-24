@@ -1,0 +1,17 @@
+{
+  "result": "PASS",
+  "version": "0.4.2-ina228-test.6",
+  "source_snapshot": "a5a1c7973cbe109a573d6b1e4803e14e2091d60c",
+  "binary_bytes": 369780,
+  "hex_min": "0x26000",
+  "hex_max": "0x80473",
+  "uf2_blocks": 1445,
+  "checks": [
+    "manifest hashes",
+    "application-only UF2 address range and byte equivalence",
+    "embedded version/source/features",
+    "linked BME680 forced driver, AHT/SHT/BME/BMP/LPS and deferred telemetry",
+    "actual ZIP prepared using disposable key and accepted by software device verifier",
+    "no production signing key or radio used"
+  ]
+}

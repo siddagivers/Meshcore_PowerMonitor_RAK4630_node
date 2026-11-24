@@ -1,0 +1,42 @@
+{
+  "version": "0.4.2-ina228-test.7",
+  "source_commit": "a5a1c7973cbe",
+  "upstream": "81dbae592ffad40b4212bc0b37e82b38da08f4bc",
+  "upstream_url": "https://github.com/meshcore-dev/MeshCore",
+  "upstream_version": "v1.18.0",
+  "target": "RAK_4631_repeater_power_monitor",
+  "profile": "official-lora-ota",
+  "lora_ota": true,
+  "ota_storage": "RAK15001 slot C; JEDEC C84015",
+  "ota_transport": "authenticated MeshCore admin CLI cli1",
+  "ota_bootloader": "OTAFIX 2.4.12 wiscore_rak4631_auto S140 6.1.1",
+  "ota_bootloader_sha256": "ec860fb46697ac4b458f4b961dec69b428380be1ce31a226cff60298f3281545",
+  "ota_handoff": "0x52 RAK15001 CS P0.26",
+  "ota_target": "RAK4631_PM_RAK15001_C_OTAFIX2412",
+  "application_start": "0x26000",
+  "application_limit": "0xD4000",
+  "dfu": {
+    "format": "Nordic/Adafruit legacy DFU 0.5",
+    "application_only": true,
+    "softdevice_req": "0x00B6"
+  },
+  "built_utc": "2026-11-24T11:23:27.990690+00:00",
+  "firmware": {
+    "RAK4631_official_rak15001_lora_ota_PM_v0.4.2-ina228-test.7.bin": {
+      "bytes": 369780,
+      "sha256": "b8eb62791d4912fea34e50616eba2fa3c553ce28981742b212c94e0a8619fba0"
+    },
+    "RAK4631_official_rak15001_lora_ota_PM_v0.4.2-ina228-test.7.zip": {
+      "bytes": 370583,
+      "sha256": "176f516c37f13dc90b53282eb66f19f91a06a0746d9a4a04c71cbe2440dc3e6d"
+    },
+    "RAK4631_official_rak15001_lora_ota_PM_v0.4.2-ina228-test.7.hex": {
+      "bytes": 1040182,
+      "sha256": "952243562eb117e3a6945d70f0ffad16fffd340f1ab83b3ffd9155adea9c68cd"
+    },
+    "RAK4631_official_rak15001_lora_ota_PM_v0.4.2-ina228-test.7.uf2": {
+      "bytes": 739840,
+      "sha256": "81b7f8976f5d9f5b1dd2cc4c35aee53db955bb01d02d465377c2ef64fd3055b5"
+    }
+  }
+}
