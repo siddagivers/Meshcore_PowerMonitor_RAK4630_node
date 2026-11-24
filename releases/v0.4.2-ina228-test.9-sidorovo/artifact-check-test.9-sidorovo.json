@@ -1,0 +1,17 @@
+{
+  "result": "PASS",
+  "version": "0.4.2-ina228-test.9-sidorovo",
+  "source_snapshot": "aa3d6fc5bd61bb462e7699d80c6d24ed9d59961b",
+  "binary_bytes": 369684,
+  "hex_min": "0x26000",
+  "hex_max": "0x80413",
+  "uf2_blocks": 1445,
+  "checks": [
+    "manifest hashes",
+    "application-only UF2 address range and byte equivalence",
+    "embedded version/source/features",
+    "linked BME680 forced driver, AHT/SHT/BME/BMP/LPS and deferred telemetry",
+    "actual ZIP prepared using disposable key and accepted by software device verifier",
+    "no production signing key or radio used"
+  ]
+}
