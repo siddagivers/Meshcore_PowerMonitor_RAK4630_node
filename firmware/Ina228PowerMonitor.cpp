@@ -14,7 +14,11 @@ using namespace Adafruit_LittleFS_Namespace;
 namespace pm {
 namespace {
 constexpr float SHUNT[2]={0.100f,0.100f};
+#if PM_SIDOROVO
+constexpr uint8_t ADDRESS[2]={0x40,0x41}; // solar, battery
+#else
 constexpr uint8_t ADDRESS[2]={0x41,0x40}; // solar, battery
+#endif
 constexpr uint16_t ADC_CONT=0xBB69,ADC_ONCE=0x3B69; // 1052us VBUS/shunt, averaging 4
 bool readReg(uint8_t address,uint8_t reg,uint32_t& result,unsigned bytes){
   Wire.beginTransmission(address);Wire.write(reg);
@@ -33,7 +37,13 @@ uint32_t crc(const void* data,size_t size){const auto* p=(const uint8_t*)data;ui
 struct State {uint32_t magic,sequence;Ina228History histories[2];uint32_t check;};
 struct LegacyHistory {Ina228History::Bucket buckets[121];uint32_t day,lastUtc;Ina228History::DayMean today;};
 struct LegacyState {uint32_t magic,sequence;LegacyHistory histories[2];uint32_t check;};
-const char* path(unsigned slot){return slot?"/pm228.b":"/pm228.a";}
+const char* path(unsigned slot){
+#if PM_SIDOROVO
+  return slot?"/pm228-sw.b":"/pm228-sw.a";
+#else
+  return slot?"/pm228.b":"/pm228.a";
+#endif
+}
 void emit(CayenneLPP& lpp,uint8_t id,float v,float a,float w){
   if(isfinite(v)&&v>=0&&v<=327.67f)lpp.addVoltage(id,v);
   if(isfinite(a)&&a>=-32.768f&&a<=32.767f)lpp.addCurrent(id,a);
@@ -165,8 +175,8 @@ bool PowerMonitor::handleCommand(const char* command,char* out,size_t cap){
   if(!strcmp(command,"pm version"))snprintf(out,cap,"power-monitor %s git %s INA228",PM_VERSION,PM_SOURCE_SHA);
   else if(!strcmp(command,"pm channels"))snprintf(out,cap,"100 Solar;101 Battery;102 MCP9808;110-113 Solar 5m/15m/1h/yesterdayUTC;120-123 Battery same. Analog=signed W;V,A means;%%=coverage");
   else if(!strcmp(command,"pm diag"))snprintf(out,cap,"I2C timeouts=%lu last=%s; uptime=%lus; refresh=%s",(unsigned long)pmWireTimeoutCount(),pmWireLastTimeoutStage(),(unsigned long)(millis()/1000),freshStatus());
-  else if(!strcmp(command,"pm sensors")||!strcmp(command,"pm status"))snprintf(out,cap,"INA228 solar41:%s battery40:%s; mcp18:%s; errors=%lu/%lu/%lu; history=%s",
-    !inaEnabled_?"DISABLED":channel_[0].detected?"OK":"MISSING",!inaEnabled_?"DISABLED":channel_[1].detected?"OK":"MISSING",mcp_.valid?"OK":mcp_.detected?"WARMING":"MISSING",(unsigned long)channel_[0].errors,(unsigned long)channel_[1].errors,(unsigned long)mcp_.errors,historySaved_?"saved":"not saved yet/FS error");
+  else if(!strcmp(command,"pm sensors")||!strcmp(command,"pm status"))snprintf(out,cap,"INA228 solar%02X:%s battery%02X:%s; mcp18:%s; errors=%lu/%lu/%lu; history=%s",
+    (unsigned)ADDRESS[0],!inaEnabled_?"DISABLED":channel_[0].detected?"OK":"MISSING",(unsigned)ADDRESS[1],!inaEnabled_?"DISABLED":channel_[1].detected?"OK":"MISSING",mcp_.valid?"OK":mcp_.detected?"WARMING":"MISSING",(unsigned long)channel_[0].errors,(unsigned long)channel_[1].errors,(unsigned long)mcp_.errors,historySaved_?"saved":"not saved yet/FS error");
   else if(!strcmp(command,"pm temp"))snprintf(out,cap,"MCP9808 0x18: %s T=%.4fC manufacturer=0x%04X device=0x%04X raw=0x%04X age=%lus",
     mcp_.valid?"OK":mcp_.detected?"WARMING":"MISSING",mcp_.temperature,mcp_.manufacturer,mcp_.device,mcp_.raw,(unsigned long)((millis()-mcp_.last)/1000));
   else if(!strcmp(command,"pm battery continuous on")||!strcmp(command,"pm battery continuous off")){

@@ -8,6 +8,9 @@ The legacy INA219 profile remains the default without PM_INA228.
 ## Hardware
 
 Battery INA228: 0x40. Solar INA228: 0x41. Both R100 = 0.100 ohm.
+The RAK4631 Sidorovo profile (`PM_SIDOROVO=1` together with `PM_INA228=1`)
+uses solar 0x40 and battery 0x41 and boots into the power telemetry page.
+It stores new history in separate `/pm228-sw.*` snapshots.
 MCP9808: 0x18. Use common ground, SDA/SCL and 3.3-V-compatible pull-ups.
 INA228 IDs are checked before configuration; other INA models cannot substitute.
 MCP manufacturer/device IDs are checked too. `pm sensors` lists the addresses

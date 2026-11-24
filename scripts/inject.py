@@ -22,6 +22,9 @@ def main():
     args=cli.parse_args()
     if args.board=="rak3401" and args.lora_ota:
         cli.error("The RAK15001 mesh OTA profile requires RAK4631")
+    sidorovo = os.environ.get('PM_SIDOROVO') == '1'
+    if sidorovo and (args.board != 'rak4631' or os.environ.get('PM_INA228') != '1'):
+        cli.error("The Sidorovo profile requires RAK4631 and PM_INA228=1")
     for label,value in [("version",args.version),("SHA",args.source_sha)]:
         if not re.fullmatch(r"[a-zA-Z0-9.+_-]{1,64}",value):
             raise SystemExit(f"Invalid {label}")
@@ -196,6 +199,7 @@ bool RadioLibWrapper::pmResume() {
         "  -DPM_LOAD_SIGN=1\n"
         "  -DENV_INCLUDE_INA260=0\n"
         "  -DENV_INCLUDE_INA219=0\n"
+        + ("  -DPM_SIDOROVO=1\n" if sidorovo else "")
     ))
     if args.lora_ota:
         ini.write_text(ini.read_text()+'''  -DPM_LORA_OTA=1

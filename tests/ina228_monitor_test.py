@@ -25,7 +25,7 @@ struct WireMock {
  int requestFrom(int a,int n){++requests;address=a;bytes=n;index=0;
   if(!(a==0x18?mcp:ina))return 0;
   if(a==0x18)value=reg==6?0x54:reg==7?0x400:reg==5?0x190:0;
-  else value=reg==0x3e?0x5449:reg==0x3f?0x2280:reg==0xb?(ready?2:0):reg==4?(320u<<4):(20480u<<4);
+  else value=reg==0x3e?0x5449:reg==0x3f?0x2280:reg==0xb?(ready?2:0):reg==4?(320u<<4):((a==0x40?25600u:20480u)<<4);
   return n;
  }
  int read(){return (value>>(8*(bytes-1-index++)))&255;}
@@ -83,11 +83,30 @@ uint32_t nowMs=0;WireMock Wire;FS InternalFS;
 pm::TelemetryPage pm::telemetry_page;
 int main(){
  pm::PowerMonitor monitor;char reply[512];
+#if PM_SIDOROVO
+ const char* bothOk="solar40:OK battery41:OK; mcp18:OK";
+ const char* batteryMissing="battery41:MISSING";
+ const char* batteryOk="battery41:OK";
+ const char* bothDisabled="solar40:DISABLED battery41:DISABLED; mcp18:OK";
+ const char* solarVoltage="5.0000V";
+ const char* batteryVoltage="4.0000V";
+ assert(pm::telemetry_page.page==pm::TelemetryPage::POWER);
+#else
+ const char* bothOk="solar41:OK battery40:OK; mcp18:OK";
+ const char* batteryMissing="battery40:MISSING";
+ const char* batteryOk="battery40:OK";
+ const char* bothDisabled="solar41:DISABLED battery40:DISABLED; mcp18:OK";
+ const char* solarVoltage="4.0000V";
+ const char* batteryVoltage="5.0000V";
+ assert(pm::telemetry_page.page==pm::TelemetryPage::LIVE);
+#endif
  monitor.begin(false);
  monitor.poll(0,1700000000);nowMs=20;monitor.poll(nowMs,1700000000);
  nowMs=300;monitor.poll(nowMs,1700000000);
  monitor.handleCommand("pm temp",reply,sizeof(reply));assert(strstr(reply,"OK T=25.0000C"));
- monitor.handleCommand("pm sensors",reply,sizeof(reply));assert(strstr(reply,"solar41:OK battery40:OK; mcp18:OK"));
+ monitor.handleCommand("pm sensors",reply,sizeof(reply));assert(strstr(reply,bothOk));
+ monitor.handleCommand("pm solar",reply,sizeof(reply));assert(strstr(reply,solarVoltage)&&strstr(reply," 0.001000A"));
+ monitor.handleCommand("pm load",reply,sizeof(reply));assert(strstr(reply,batteryVoltage)&&strstr(reply," -0.001000A"));
  pm::telemetry_page.page=pm::TelemetryPage::ENVIRONMENT;
  CayenneLPP env;monitor.appendTelemetry(env,2);assert(env.temperatures.size()==1&&env.temperatures[0]==102&&env.volts.empty());
  CayenneLPP denied;monitor.appendTelemetry(denied,0);assert(denied.temperatures.empty());
@@ -95,10 +114,10 @@ int main(){
  for(nowMs=301;nowMs<320;++nowMs)monitor.poll(nowMs,1700000000);
  assert(Wire.requests==requests); // no conversion-ready hot loop
  nowMs=521;monitor.poll(nowMs,1700000000);
- monitor.handleCommand("pm sensors",reply,sizeof(reply));assert(strstr(reply,"battery40:MISSING"));
+ monitor.handleCommand("pm sensors",reply,sizeof(reply));assert(strstr(reply,batteryMissing));
  Wire.ready=true;nowMs=10001;monitor.poll(nowMs,1700000010);
  nowMs=10021;monitor.poll(nowMs,1700000010);
- monitor.handleCommand("pm sensors",reply,sizeof(reply));assert(strstr(reply,"battery40:OK"));
+ monitor.handleCommand("pm sensors",reply,sizeof(reply));assert(strstr(reply,batteryOk));
  monitor.handleCommand("pm ina off",reply,sizeof(reply));
  Wire.mcp=false;nowMs=60300;monitor.poll(nowMs,1700000060);
  monitor.handleCommand("pm temp",reply,sizeof(reply));assert(strstr(reply,"MISSING"));
@@ -107,7 +126,7 @@ int main(){
  assert(Wire.requests==requests); // disabled INAs and missing MCP do not flood bus
  Wire.mcp=true;nowMs=70300;monitor.poll(nowMs,1700000070);
  nowMs=70600;monitor.poll(nowMs,1700000070);
- monitor.handleCommand("pm sensors",reply,sizeof(reply));assert(strstr(reply,"solar41:DISABLED battery40:DISABLED; mcp18:OK"));
+  monitor.handleCommand("pm sensors",reply,sizeof(reply));assert(strstr(reply,bothDisabled));
  monitor.handleCommand("pm ina on",reply,sizeof(reply));
  monitor.handleCommand("pm battery continuous off",reply,sizeof(reply));
  monitor.refreshTelemetry(1700000070);
@@ -126,10 +145,17 @@ int main(){
  for(size_t i=0;i<offsetof(OldState,check);++i){crc^=bytes[i];crc*=16777619;}
  old.check=crc;InternalFS.files["/pm228.a"]=std::vector<uint8_t>(bytes,bytes+sizeof(old));
  pm::PowerMonitor migrated;migrated.begin(true);migrated.poll(nowMs,midnight);
+#if PM_SIDOROVO
+ migrated.handleCommand("pm history solar prevday",reply,sizeof(reply));assert(strstr(reply,"No measured history"));
+ assert(migrated.checkpointNow());
+ assert(InternalFS.files["/pm228.a"].size()==sizeof(old));
+ assert(InternalFS.files["/pm228-sw.b"].size()>sizeof(old));
+#else
  migrated.handleCommand("pm history solar prevday",reply,sizeof(reply));assert(strstr(reply,"4.0000V 0.100000A 0.400000W"));
  assert(InternalFS.files["/pm228.a"].size()>sizeof(old));
  pm::PowerMonitor restored;restored.begin(true);restored.poll(nowMs,midnight);
  restored.handleCommand("pm history solar prevday",reply,sizeof(reply));assert(strstr(reply,"measured=60000ms"));
+#endif
  puts("PASS actual monitor: stalled ADC backoff, retry recovery, MCP independent of INA disable, environment page and permissions");
 }
 '''
@@ -143,7 +169,8 @@ with tempfile.TemporaryDirectory() as folder:
  (p/'PowerMonitor.cpp').write_text((root/'firmware/Ina228PowerMonitor.cpp').read_text())
  compiler=json.loads(os.environ.get('CXX_JSON','["g++"]'))
  exe=p/('test.exe' if os.name=='nt' else 'test')
- subprocess.run(compiler+['-std=c++17','-Wall','-Wextra','-Werror','-Wno-misleading-indentation',
-  '-DPM_VERSION="review"','-DPM_SOURCE_SHA="review"','-I',str(p),'-I',str(root/'firmware'),
-  str(p/'PowerMonitor.cpp'),str(p/'test.cpp'),'-o',str(exe)],check=True)
- subprocess.run([str(exe)],check=True)
+ for profile in (0, 1):
+  subprocess.run(compiler+['-std=c++17','-Wall','-Wextra','-Werror','-Wno-misleading-indentation',
+   '-DPM_VERSION="review"','-DPM_SOURCE_SHA="review"',f'-DPM_SIDOROVO={profile}','-I',str(p),'-I',str(root/'firmware'),
+   str(p/'PowerMonitor.cpp'),str(p/'test.cpp'),'-o',str(exe)],check=True)
+  subprocess.run([str(exe)],check=True)
