@@ -17,8 +17,11 @@ def main():
     cli.add_argument("upstream",type=Path)
     cli.add_argument("--version",default="0.4.2-local")
     cli.add_argument("--source-sha",default="unknown")
+    cli.add_argument("--board",choices=("rak4631","rak3401"),default="rak4631")
     cli.add_argument("--lora-ota",action="store_true")
     args=cli.parse_args()
+    if args.board=="rak3401" and args.lora_ota:
+        cli.error("The RAK15001 mesh OTA profile requires RAK4631")
     for label,value in [("version",args.version),("SHA",args.source_sha)]:
         if not re.fullmatch(r"[a-zA-Z0-9.+_-]{1,64}",value):
             raise SystemExit(f"Invalid {label}")
@@ -165,16 +168,17 @@ bool RadioLibWrapper::pmResume() {
     cpp.write_text('#include "PowerMonitorBuild.h"\n'+cpp.read_text())
     cpp=main_file.parent/"LoRaOta.cpp"
     cpp.write_text('#include "PowerMonitorBuild.h"\n'+cpp.read_text())
-    base="RAK_4631_repeater"
-    ini=args.upstream/"variants/rak4631/platformio.ini"
+    base=f"RAK_{args.board[3:]}_repeater"
+    base_scripts="rak4631" if args.board=="rak4631" else "nrf52_base"
+    ini=args.upstream/"variants"/args.board/"platformio.ini"
     ini.write_text(ini.read_text() + (
-        "\n; RAK4631 power monitor overlay (2 INA219 + MCP9808)\n"
-        "[env:RAK_4631_repeater_power_monitor]\n"
+        "\n; RAK power monitor overlay\n"
+        f"[env:{base}_power_monitor]\n"
         "extends = env:"+base+"\n"
         "platform = nordicnrf52@11.0.0\n"
         "board_build.ldscript = boards/nrf52840_s140_v6_extrafs.ld\n"
         "board_upload.maximum_size = 712704\n"
-        "extra_scripts = ${rak4631.extra_scripts}\n"
+        f"extra_scripts = ${{{base_scripts}.extra_scripts}}\n"
         "  pre:scripts/pm_bounded_wire.py\n"
         "  pre:scripts/pm_bounded_sensors.py\n"
         "build_unflags = -Ofast\n"
